@@ -30,47 +30,47 @@ export default function Clients() {
   )
 
   const statusInfo: Record<string, { label: string; bg: string; color: string }> = {
-    lead: { label: 'ליד', bg: '#E1F5EE', color: '#0F6E56' },
-    active: { label: 'פעיל', bg: '#E6F1FB', color: '#185FA5' },
-    past: { label: 'עבר', bg: '#F1EFE8', color: '#5F5E5A' },
+    lead:   { label: 'Lead',   bg: '#E1F5EE', color: '#0F6E56' },
+    active: { label: 'Active', bg: '#E6F1FB', color: '#185FA5' },
+    past:   { label: 'Past',   bg: '#F1EFE8', color: '#5F5E5A' },
   }
 
   return (
     <div style={{ padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 600 }}>לקוחות</h1>
-          <p style={{ color: '#888', fontSize: 13, marginTop: 2 }}>{clients.length} לקוחות במערכת</p>
+          <h1 style={{ fontSize: 22, fontWeight: 600 }}>Clients</h1>
+          <p style={{ color: '#888', fontSize: 13, marginTop: 2 }}>{clients.length} clients in system</p>
         </div>
         <button onClick={() => navigate('/clients/new')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#1a2a3a', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
-          <Plus size={15} /> תיק לקוח חדש
+          <Plus size={15} /> New Client File
         </button>
       </div>
 
       <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #e5e5e5', overflow: 'hidden' }}>
         <div style={{ padding: '12px 16px', borderBottom: '0.5px solid #f0f0f0', display: 'flex', gap: 10, alignItems: 'center' }}>
           <div style={{ position: 'relative', flex: 1 }}>
-            <Search size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#aaa' }} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="חיפוש לפי שם, מספר תיק, טלפון..." style={{ width: '100%', padding: '7px 32px 7px 10px', border: '0.5px solid #e0e0e0', borderRadius: 8, fontSize: 13, outline: 'none', direction: 'rtl' }} />
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#aaa' }} />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, file number, phone, email..." style={{ width: '100%', padding: '7px 10px 7px 32px', border: '0.5px solid #e0e0e0', borderRadius: 8, fontSize: 13, outline: 'none' }} />
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             {['all', 'lead', 'active', 'past'].map(s => (
               <button key={s} onClick={() => setStatusFilter(s)} style={{ padding: '6px 12px', borderRadius: 20, border: '0.5px solid', fontSize: 12, cursor: 'pointer', fontWeight: statusFilter === s ? 600 : 400, borderColor: statusFilter === s ? '#1a2a3a' : '#e0e0e0', background: statusFilter === s ? '#1a2a3a' : '#fff', color: statusFilter === s ? '#fff' : '#555' }}>
-                {s === 'all' ? 'הכל' : statusInfo[s]?.label}
+                {s === 'all' ? 'All' : statusInfo[s]?.label}
               </button>
             ))}
           </div>
         </div>
 
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>טוען...</div>
+          <div style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>Loading...</div>
         ) : filtered.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>
-            <div style={{ fontSize: 15, marginBottom: 8 }}>לא נמצאו לקוחות</div>
-            <button onClick={() => navigate('/clients/new')} style={{ color: '#185FA5', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}>הוסף לקוח ראשון</button>
+            <div style={{ fontSize: 15, marginBottom: 8 }}>No clients found</div>
+            <button onClick={() => navigate('/clients/new')} style={{ color: '#185FA5', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}>Add first client</button>
           </div>
         ) : filtered.map((c) => (
-          <div key={c.id} onClick={() => navigate(`/clients/${c.id}`)} style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', borderBottom: '0.5px solid #f8f8f8', transition: 'background 0.1s' }}
+          <div key={c.id} onClick={() => navigate(`/clients/${c.id}`)} style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', borderBottom: '0.5px solid #f8f8f8' }}
             onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
             <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#E6F1FB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: '#185FA5', flexShrink: 0 }}>
