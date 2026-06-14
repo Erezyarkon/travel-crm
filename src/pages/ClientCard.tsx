@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowRight, Plus, BedDouble, Car, Bus, Map, Ticket, UtensilsCrossed, Plane, FileText, Edit2 } from 'lucide-react'
+import { ArrowRight, Plus, BedDouble, Car, Bus, Map, Ticket, UtensilsCrossed, Plane, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const BOOKING_TYPES = [
