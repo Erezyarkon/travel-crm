@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, BedDouble, Car, Bus, Map, Ticket, UtensilsCrossed, Plane, FileText } from 'lucide-react'
+import { ArrowLeft, Plus, BedDouble, Car, Bus, Map, Ticket, UtensilsCrossed, Plane, FileText, Shield } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import VoucherPDF from '../components/VoucherPDF'
 
 const BOOKING_TYPES = [
   { key: 'hotel',     label: 'Hotel',      icon: BedDouble,       color: '#185FA5', bg: '#E6F1FB' },
@@ -11,7 +12,7 @@ const BOOKING_TYPES = [
   { key: 'entrance',  label: 'Entrance',   icon: Ticket,          color: '#534AB7', bg: '#EEEDFE' },
   { key: 'meals',     label: 'Meals',      icon: UtensilsCrossed, color: '#993556', bg: '#FBEAF0' },
   { key: 'flight',    label: 'Flights',    icon: Plane,           color: '#0C447C', bg: '#B5D4F4' },
-  { key: 'visa',      label: 'Visa',       icon: FileText,        color: '#993C1D', bg: '#FAECE7' },
+  { key: 'vip',       label: 'VIP',        icon: Shield,          color: '#B8860B', bg: '#FFF8E6' },
 ]
 
 const STATUS_STEPS = ['inquiry','quoted','confirmed','paid','voucher_sent','completed']
@@ -29,6 +30,7 @@ export default function ClientCard() {
   const [activeType, setActiveType] = useState('hotel')
   const [showNewBooking, setShowNewBooking] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [voucherBooking, setVoucherBooking] = useState<any>(null)
 
   useEffect(() => {
     async function load() {
@@ -54,6 +56,15 @@ export default function ClientCard() {
   ]
 
   return (
+    <>
+      {voucherBooking && (
+        <VoucherPDF
+          booking={voucherBooking}
+          client={client}
+          travelers={travelers}
+          onClose={() => setVoucherBooking(null)}
+        />
+      )}
     <div style={{ padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
         <button onClick={() => navigate('/clients')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
@@ -155,6 +166,7 @@ export default function ClientCard() {
               </div>
             ) : activeBookings.map(b => (
               <BookingRow key={b.id} booking={b}
+                onVoucher={() => setVoucherBooking(b)}
                 onStatusChange={async (newStatus: string) => {
                   await supabase.from('bookings').update({ status: newStatus }).eq('id', b.id)
                   setBookings(bks => bks.map(bk => bk.id === b.id ? { ...bk, status: newStatus } : bk))
@@ -189,10 +201,11 @@ export default function ClientCard() {
         </div>
       </div>
     </div>
+    </>
   )
 }
 
-function BookingRow({ booking: b, onStatusChange }: { booking: any; onStatusChange: (s: string) => void }) {
+function BookingRow({ booking: b, onStatusChange, onVoucher }: { booking: any; onStatusChange: (s: string) => void; onVoucher: () => void }) {
   const stepIdx = STATUS_STEPS.indexOf(b.status)
   return (
     <div style={{ padding: '14px 16px', borderBottom: '0.5px solid #f0f0f0' }}>
@@ -234,6 +247,7 @@ function BookingRow({ booking: b, onStatusChange }: { booking: any; onStatusChan
         {b.status === 'paid'         && <Abtn label="Send Voucher"    color="#534AB7" bg="#EEEDFE" onClick={() => onStatusChange('voucher_sent')} />}
         {b.status === 'voucher_sent' && <Abtn label="Complete"        color="#0F6E56" bg="#E1F5EE" onClick={() => onStatusChange('completed')} />}
         {!['completed','cancelled'].includes(b.status) && <Abtn label="Cancel" color="#A32D2D" bg="#FCEBEB" onClick={() => onStatusChange('cancelled')} />}
+        <Abtn label="📄 View / Print" color="#1a2a3a" bg="#f0f4f8" onClick={onVoucher} />
         {b.notes && <span style={{ fontSize: 11, color: '#888', alignSelf: 'center' }}>📝 {b.notes}</span>}
       </div>
     </div>
