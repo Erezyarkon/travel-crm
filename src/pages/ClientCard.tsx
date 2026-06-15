@@ -518,22 +518,141 @@ function BookingForm({ type, clientId, fileNumber, travelers, onSave, onCancel }
         <GuestBar color="green" text={travelers.map((t:any,i:number)=>`${i+1}. ${t.full_name} · ${t.type==='child'?`Child age ${t.age}`:'Adult'}${t.passport_number?` · ${t.passport_number}`:''}`).join(' | ')} />
       </>}
 
-      {/* CAR RENTAL */}
+      {/* CAR RENTAL — Europcar Israel */}
       {type === 'car_rental' && <>
         <GuestBar color="green" text={`Lead driver: ${lead?.full_name} · ${lead?.passport_number||''} · ${lead?.nationality||''}`} />
-        <div style={g3}>
-          <div><label style={lbl}>Rental Company</label><input style={inp} value={f.service_name} onChange={e => s('service_name',e.target.value)} placeholder="Hertz, Avis, Budget..." /></div>
-          <div><label style={lbl}>Car Type</label><select style={inp} value={f.car_type} onChange={e => s('car_type',e.target.value)}>{['Economy','Compact','SUV','Sedan','Minivan','Luxury','4x4','Convertible'].map(c=><option key={c}>{c}</option>)}</select></div>
-          <div><label style={lbl}>Insurance</label><select style={inp} value={f.insurance} onChange={e => s('insurance',e.target.value)}>{['Full','Basic','Third party','None'].map(i=><option key={i}>{i}</option>)}</select></div>
-        </div>
-        <div style={g3}>
-          <div><label style={lbl}>Pickup Date</label><input type="date" style={inp} value={f.pickup_date} onChange={e => s('pickup_date',e.target.value)} /></div>
-          <div><label style={lbl}>Return Date</label><input type="date" style={inp} value={f.return_date} onChange={e => s('return_date',e.target.value)} /></div>
-          <div><label style={lbl}>No. of Days</label><input type="number" style={inp} value={f.days} onChange={e => s('days',e.target.value)} /></div>
-        </div>
-        <div style={g2}>
+        {/* Dates + Location */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, marginBottom:8 }}>
+          <div><label style={lbl}>Pickup Date</label><input type="date" style={inp} value={f.pickup_date} onChange={e => { s('pickup_date',e.target.value); const d=Math.round((new Date(f.return_date).getTime()-new Date(e.target.value).getTime())/86400000); if(d>0) s('days',String(d)) }} /></div>
+          <div><label style={lbl}>Return Date</label><input type="date" style={inp} value={f.return_date} onChange={e => { s('return_date',e.target.value); const d=Math.round((new Date(e.target.value).getTime()-new Date(f.pickup_date).getTime())/86400000); if(d>0) s('days',String(d)) }} /></div>
           <div><label style={lbl}>Pickup Location</label><input style={inp} value={f.pickup_location} onChange={e => s('pickup_location',e.target.value)} placeholder="Airport, Hotel..." /></div>
-          <div><label style={lbl}>Return Location</label><input style={inp} value={f.return_location} onChange={e => s('return_location',e.target.value)} placeholder="Same or different..." /></div>
+          <div><label style={lbl}>Return Location</label><select style={inp} value={f.return_location} onChange={e => s('return_location',e.target.value)}><option>Same as pickup</option><option>Different location</option></select></div>
+        </div>
+        {f.days && <div style={{ marginBottom:8 }}><span style={{ background:'#E1F5EE', color:'#085041', fontSize:11, fontWeight:600, padding:'3px 10px', borderRadius:20 }}>📅 {f.days} days</span></div>}
+
+        {/* Vehicle Type Tabs */}
+        <div style={{ marginBottom:8 }}>
+          <label style={lbl}>Vehicle Type — Europcar Israel</label>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:5, marginBottom:8 }}>
+            {[
+              { key:'sedan', label:'Sedans & Luxury' },
+              { key:'suv',   label:'SUV / STW' },
+              { key:'van',   label:'Vans 7–9 seats' },
+              { key:'pickup',label:'Pickup / Cab' },
+            ].map(t => (
+              <button key={t.key} onClick={() => { s('car_type_group', t.key); s('car_type',''); s('service_name','Europcar Israel') }}
+                style={{ border: f.car_type_group===t.key ? '2px solid #0F6E56' : '0.5px solid #ddd', borderRadius:8, padding:'6px 4px', cursor:'pointer', background: f.car_type_group===t.key ? '#E1F5EE' : '#fff', fontSize:10, color: f.car_type_group===t.key ? '#085041' : '#666', fontWeight: f.car_type_group===t.key ? 600 : 400 }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Sedans */}
+          {f.car_type_group === 'sedan' && (
+            <div>
+              {[
+                { cat:'Mini (4 seats)', cars:[{name:'Suzuki Alto Manual',grp:'B',code:'MBMR'},{name:'Toyota Aygo',grp:'Q',code:'MBAR'}] },
+                { cat:'Economy (4 seats)', cars:[{name:'Kia Picanto',grp:'C',code:'EBAR'},{name:'Hyundai i20',grp:'D',code:'ECAR'}] },
+                { cat:'Economy Elite (5 seats)', cars:[{name:'Ford Fiesta',grp:'E',code:'EDAR'},{name:'Hyundai Accent',grp:'F',code:'EZAR'}] },
+                { cat:'Compact → Standard → Luxury (5 seats)', cars:[{name:'Mazda 3',grp:'I',code:'CCAR'},{name:'Mazda 6',grp:'M',code:'SDAR'},{name:'Skoda Superb',grp:'R',code:'SCAR'},{name:'Nissan Maxima',grp:'P',code:'LDAR'},{name:'Audi A6',grp:'W',code:'LCBR'}] },
+              ].map(({ cat, cars }) => (
+                <div key={cat} style={{ marginBottom:6 }}>
+                  <div style={{ fontSize:9, fontWeight:500, color:'#888', textTransform:'uppercase', letterSpacing:'.3px', borderBottom:'0.5px solid #eee', paddingBottom:3, marginBottom:4 }}>{cat}</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:4 }}>
+                    {cars.map(c => (
+                      <button key={c.name} onClick={() => { s('car_type',c.name); s('car_group',c.grp); s('service_name',`Europcar — ${c.name}`) }}
+                        style={{ border: f.car_type===c.name ? '2px solid #0F6E56' : '0.5px solid #ddd', borderRadius:6, padding:'5px 7px', cursor:'pointer', background: f.car_type===c.name ? '#E1F5EE' : '#fff', textAlign:'left', position:'relative' }}>
+                        <span style={{ position:'absolute', top:3, right:4, fontSize:8, fontWeight:600, background: f.car_type===c.name?'#0F6E56':'#E1F5EE', color: f.car_type===c.name?'#fff':'#085041', padding:'0 4px', borderRadius:6 }}>{c.grp}</span>
+                        <div style={{ fontSize:10, fontWeight:600, color: f.car_type===c.name?'#085041':'#1a1a1a' }}>{c.name}</div>
+                        <div style={{ fontSize:8, color:'#888', marginTop:1 }}>{c.code}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* SUVs */}
+          {f.car_type_group === 'suv' && (
+            <div>
+              {[
+                { cat:'Compact SW / SUV (5 seats)', cars:[{name:'Ford Focus SW',grp:'IW',code:'CWAR'},{name:'Mitsubishi ASX',grp:'H',code:'CFAR'}] },
+                { cat:'Standard → Luxury SUV (5 seats)', cars:[{name:'Hyundai Tucson Aut.',grp:'J',code:'SFBR'},{name:'Ford Edge Aut.',grp:'O',code:'LFBR'}] },
+              ].map(({ cat, cars }) => (
+                <div key={cat} style={{ marginBottom:6 }}>
+                  <div style={{ fontSize:9, fontWeight:500, color:'#888', textTransform:'uppercase', letterSpacing:'.3px', borderBottom:'0.5px solid #eee', paddingBottom:3, marginBottom:4 }}>{cat}</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:4 }}>
+                    {cars.map(c => (
+                      <button key={c.name} onClick={() => { s('car_type',c.name); s('car_group',c.grp); s('service_name',`Europcar — ${c.name}`) }}
+                        style={{ border: f.car_type===c.name ? '2px solid #0F6E56' : '0.5px solid #ddd', borderRadius:6, padding:'5px 7px', cursor:'pointer', background: f.car_type===c.name ? '#E1F5EE' : '#fff', textAlign:'left', position:'relative' }}>
+                        <span style={{ position:'absolute', top:3, right:4, fontSize:8, fontWeight:600, background: f.car_type===c.name?'#0F6E56':'#E1F5EE', color: f.car_type===c.name?'#fff':'#085041', padding:'0 4px', borderRadius:6 }}>{c.grp}</span>
+                        <div style={{ fontSize:10, fontWeight:600, color: f.car_type===c.name?'#085041':'#1a1a1a' }}>{c.name}</div>
+                        <div style={{ fontSize:8, color:'#888', marginTop:1 }}>{c.code}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Vans */}
+          {f.car_type_group === 'van' && (
+            <div style={{ marginBottom:6 }}>
+              <div style={{ fontSize:9, fontWeight:500, color:'#888', textTransform:'uppercase', letterSpacing:'.3px', borderBottom:'0.5px solid #eee', paddingBottom:3, marginBottom:4 }}>Vans 7–9 seats</div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:4 }}>
+                {[{name:'Opel Zafira Aut.',grp:'U',code:'IVAR',seats:7},{name:'Mitsubishi Outlander',grp:'V',code:'SVAR',seats:7},{name:'Kia Carnival',grp:'V8',code:'FVAR',seats:8},{name:'Renault Traffic',grp:'Y',code:'FVMR',seats:9},{name:'Toyota Proace',grp:'Z',code:'LVAR',seats:9}].map(c => (
+                  <button key={c.name} onClick={() => { s('car_type',c.name); s('car_group',c.grp); s('service_name',`Europcar — ${c.name}`) }}
+                    style={{ border: f.car_type===c.name ? '2px solid #0F6E56' : '0.5px solid #ddd', borderRadius:6, padding:'5px 7px', cursor:'pointer', background: f.car_type===c.name ? '#E1F5EE' : '#fff', textAlign:'left', position:'relative' }}>
+                    <span style={{ position:'absolute', top:3, right:4, fontSize:8, fontWeight:600, background: f.car_type===c.name?'#0F6E56':'#E1F5EE', color: f.car_type===c.name?'#fff':'#085041', padding:'0 4px', borderRadius:6 }}>{c.grp}</span>
+                    <div style={{ fontSize:10, fontWeight:600, color: f.car_type===c.name?'#085041':'#1a1a1a' }}>{c.name}</div>
+                    <div style={{ fontSize:8, color:'#888', marginTop:1 }}>{c.seats} seats · {c.code}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Pickup */}
+          {f.car_type_group === 'pickup' && (
+            <div style={{ marginBottom:6 }}>
+              <div style={{ fontSize:9, fontWeight:500, color:'#888', textTransform:'uppercase', letterSpacing:'.3px', borderBottom:'0.5px solid #eee', paddingBottom:3, marginBottom:4 }}>Pickup / Cab</div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:4 }}>
+                {[{name:'Citroen Berlingo',grp:'T',code:'CPAR',seats:5}].map(c => (
+                  <button key={c.name} onClick={() => { s('car_type',c.name); s('car_group',c.grp); s('service_name',`Europcar — ${c.name}`) }}
+                    style={{ border: f.car_type===c.name ? '2px solid #0F6E56' : '0.5px solid #ddd', borderRadius:6, padding:'5px 7px', cursor:'pointer', background: f.car_type===c.name ? '#E1F5EE' : '#fff', textAlign:'left', position:'relative' }}>
+                    <span style={{ position:'absolute', top:3, right:4, fontSize:8, fontWeight:600, background: f.car_type===c.name?'#0F6E56':'#E1F5EE', color: f.car_type===c.name?'#fff':'#085041', padding:'0 4px', borderRadius:6 }}>{c.grp}</span>
+                    <div style={{ fontSize:10, fontWeight:600, color: f.car_type===c.name?'#085041':'#1a1a1a' }}>{c.name}</div>
+                    <div style={{ fontSize:8, color:'#888', marginTop:1 }}>{c.seats} seats · {c.code}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Selected vehicle confirmation */}
+          {f.car_type && <div style={{ background:'#E1F5EE', border:'0.5px solid #5DCAA5', borderRadius:6, padding:'5px 10px', fontSize:10, color:'#085041', marginTop:4 }}>✅ Selected: <strong>{f.car_type}</strong> or similar · Group {f.car_group}</div>}
+        </div>
+
+        {/* Insurance + Extras */}
+        <div style={g2}>
+          <div>
+            <label style={lbl}>Coverage</label>
+            <select style={inp} value={f.insurance} onChange={e => s('insurance',e.target.value)}>
+              <option>Inclusive — CDW + THW</option>
+              <option>Super CDW upgrade</option>
+              <option>Full super package</option>
+            </select>
+          </div>
+          <div>
+            <label style={lbl}>Mileage</label>
+            <select style={inp}>
+              <option>250 km/day (1–2 days)</option>
+              <option>Unlimited (3+ days)</option>
+              <option>Weekly unlimited</option>
+            </select>
+          </div>
         </div>
         <div style={g2}>
           <div><label style={lbl}>Payment to Supplier</label><select style={inp} value={f.payment_supplier} onChange={e => s('payment_supplier',e.target.value)}>{['Credit card','Bank transfer','Cash','Voucher'].map(p=><option key={p}>{p}</option>)}</select></div>
