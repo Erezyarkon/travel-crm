@@ -1,6 +1,9 @@
 import React from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Users, CalendarDays, Building2, BarChart3, Settings, Plane, Plus } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, Building2, BarChart3, Settings, Plane, Plus, LogOut } from 'lucide-react'
+import { useAuth } from '../lib/auth'
+
+const ROLE_LABELS: Record<string, string> = { admin: 'Administrator', agent: 'Agent', viewer: 'Viewer' }
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -13,6 +16,7 @@ const navItems = [
 
 export default function Layout() {
   const navigate = useNavigate()
+  const { profile, signOut } = useAuth()
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <aside style={{ width: 200, background: '#1a2a3a', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
@@ -33,7 +37,7 @@ export default function Layout() {
         </button>
 
         <nav style={{ flex: 1, padding: '8px 0' }}>
-          {navItems.map(({ to, icon: Icon, label }) => (
+          {navItems.filter(({ to }) => to !== '/settings' || profile?.role === 'admin').map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} style={({ isActive }) => ({
               display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px',
               color: isActive ? '#fff' : '#7899bb',
@@ -47,8 +51,21 @@ export default function Layout() {
           ))}
         </nav>
 
-        <div style={{ padding: '12px 16px', borderTop: '1px solid #2d3f50', color: '#7899bb', fontSize: 10, textAlign: 'center' }}>
-          v1.0 · GitHub + Vercel
+        <div style={{ borderTop: '1px solid #2d3f50' }}>
+          {profile && (
+            <div style={{ padding: '12px 16px 8px' }}>
+              <div style={{ color: '#fff', fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile.full_name}</div>
+              <div style={{ color: '#7899bb', fontSize: 10 }}>{ROLE_LABELS[profile.role] || profile.role}</div>
+            </div>
+          )}
+          <button onClick={() => signOut()} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', background: 'transparent', border: 'none', color: '#7899bb', fontSize: 13, cursor: 'pointer' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#7899bb')}>
+            <LogOut size={16} /> Sign Out
+          </button>
+          <div style={{ padding: '8px 16px 12px', color: '#566b80', fontSize: 10, textAlign: 'center' }}>
+            v1.0 · GitHub + Vercel
+          </div>
         </div>
       </aside>
 
