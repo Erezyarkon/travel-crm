@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../lib/auth'
 
 export default function Clients() {
   const navigate = useNavigate()
+  const { profile } = useAuth()
   const [clients, setClients] = useState<any[]>([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -12,15 +14,18 @@ export default function Clients() {
 
   useEffect(() => {
     async function load() {
+      if (!profile) return
       setLoading(true)
       let q = supabase.from('clients').select('*').order('created_at', { ascending: false })
       if (statusFilter !== 'all') q = q.eq('status', statusFilter)
+      // Agents only see clients they own. Admins and viewers see everything.
+      if (profile.role === 'agent') q = q.eq('owner_id', profile.id)
       const { data } = await q
       setClients(data || [])
       setLoading(false)
     }
     load()
-  }, [statusFilter])
+  }, [statusFilter, profile])
 
   const filtered = clients.filter(c =>
     c.full_name?.toLowerCase().includes(search.toLowerCase()) ||

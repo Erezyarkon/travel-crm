@@ -2,12 +2,14 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../lib/auth'
 
 const inp = { width: '100%', padding: '8px 10px', border: '0.5px solid #d0d0d0', borderRadius: 8, fontSize: 13, outline: 'none', background: '#fafafa' } as React.CSSProperties
 const lbl = { fontSize: 11, color: '#555', fontWeight: '500' as const, marginBottom: 4, display: 'block' as const }
 
 export default function NewClient() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ full_name: '', phone: '', email: '', passport_number: '', date_of_birth: '', nationality: '', status: 'lead', preferences: '' })
   const [travelers, setTravelers] = useState<any[]>([])
@@ -21,7 +23,7 @@ export default function NewClient() {
     if (!form.full_name) return alert('Please enter full name')
     setSaving(true)
     const fileNum = 'TRV-' + String(Date.now()).slice(-4).padStart(4, '0')
-    const { data: client, error } = await supabase.from('clients').insert({ ...form, file_number: fileNum }).select().single()
+    const { data: client, error } = await supabase.from('clients').insert({ ...form, file_number: fileNum, owner_id: user?.id || null }).select().single()
     if (error) { alert('Error: ' + error.message); setSaving(false); return }
     if (travelers.length > 0) {
       await supabase.from('travelers').insert(travelers.map((t, i) => ({ ...t, client_id: client.id, is_lead: i === 0, age: t.age ? parseInt(t.age) : null })))
