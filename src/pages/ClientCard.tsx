@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, BedDouble, Car, Bus, Map, Ticket, UtensilsCrossed, Plane, Shield } from 'lucide-react'
+import { ArrowLeft, Plus, BedDouble, Car, Bus, Map, Ticket, UtensilsCrossed, Plane, Shield, Pencil, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth, Profile } from '../lib/auth'
 import { listProfiles } from '../lib/team'
@@ -47,6 +47,17 @@ export default function ClientCard() {
   const [voucherBooking, setVoucherBooking] = useState<any>(null)
   const { profile } = useAuth()
   const [agents, setAgents] = useState<Profile[]>([])
+  const [showEditClient, setShowEditClient] = useState(false)
+  const [showAddTraveler, setShowAddTraveler] = useState(false)
+
+  async function reloadData() {
+    const [{ data: c }, { data: tr }, { data: b }] = await Promise.all([
+      supabase.from('clients').select('*').eq('id', id).single(),
+      supabase.from('travelers').select('*').eq('client_id', id),
+      supabase.from('bookings').select('*').eq('client_id', id).order('created_at', { ascending: false }),
+    ])
+    setClient(c); setTravelers(tr || []); setBookings(b || [])
+  }
 
   useEffect(() => {
     async function load() {
@@ -89,6 +100,12 @@ export default function ClientCard() {
       {voucherBooking && (
         <VoucherModal booking={voucherBooking} client={client} travelers={allTravelers} onClose={() => setVoucherBooking(null)} />
       )}
+      {showEditClient && (
+        <EditClientModal client={client} onClose={() => setShowEditClient(false)} onSaved={async () => { setShowEditClient(false); await reloadData() }} />
+      )}
+      {showAddTraveler && (
+        <AddTravelerModal clientId={id!} onClose={() => setShowAddTraveler(false)} onSaved={async () => { setShowAddTraveler(false); await reloadData() }} />
+      )}
       <div style={{ padding: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
           <button onClick={() => navigate('/clients')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
@@ -102,10 +119,13 @@ export default function ClientCard() {
             <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #e5e5e5', overflow: 'hidden' }}>
               <div style={{ background: '#1a2a3a', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#E6F1FB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600, color: '#185FA5', flexShrink: 0 }}>{initials}</div>
-                <div>
+                <div style={{ flex: 1 }}>
                   <div style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>{client.full_name}</div>
                   <div style={{ color: '#f5c842', fontSize: 11, marginTop: 2, fontWeight: 600 }}>File {client.file_number}</div>
                 </div>
+                <button onClick={() => setShowEditClient(true)} title="Edit client" style={{ background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 7, padding: 6, cursor: 'pointer', display: 'flex' }}>
+                  <Pencil size={13} color="#f5c842" />
+                </button>
               </div>
               <div style={{ padding: 14 }}>
                 {[['Phone', client.phone],['Email', client.email],['Passport', client.passport_number],['Date of Birth', client.date_of_birth],['Nationality', client.nationality],['Preferences', client.preferences]].filter(([,v]) => v).map(([label, val]) => (
@@ -139,7 +159,7 @@ export default function ClientCard() {
             <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #e5e5e5', padding: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <span style={{ fontSize: 12, fontWeight: 600 }}>Travelers ({allTravelers.length})</span>
-                <button style={{ fontSize: 10, color: '#0F6E56', background: '#E1F5EE', border: '0.5px solid #5DCAA5', borderRadius: 20, padding: '2px 8px', cursor: 'pointer' }}>+ Add</button>
+                <button onClick={() => setShowAddTraveler(true)} style={{ fontSize: 10, color: '#0F6E56', background: '#E1F5EE', border: '0.5px solid #5DCAA5', borderRadius: 20, padding: '2px 8px', cursor: 'pointer' }}>+ Add</button>
               </div>
               {allTravelers.map((tr, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: '#fafafa', borderRadius: 8, marginBottom: 5, border: '0.5px solid #eee' }}>
@@ -863,3 +883,171 @@ function BookingForm({ type, clientId, fileNumber, travelers, onSave, onCancel }
 // v2.0 - Mon Jun 15 06:50:28 UTC 2026
 
 // rebuild trigger 17:55:51
+
+// ============ EDIT CLIENT MODAL ============
+function EditClientModal({ client, onClose, onSaved }: { client: any; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState({
+    full_name: client.full_name || '',
+    phone: client.phone || '',
+    email: client.email || '',
+    passport_number: client.passport_number || '',
+    date_of_birth: client.date_of_birth || '',
+    nationality: client.nationality || '',
+    status: client.status || 'lead',
+    preferences: client.preferences || '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  function s(key: string, value: string) { setForm(f => ({ ...f, [key]: value })) }
+
+  async function handleSave() {
+    if (!form.full_name.trim()) { setError('Name is required.'); return }
+    setSaving(true); setError('')
+    const { error } = await supabase.from('clients').update({
+      full_name: form.full_name.trim(),
+      phone: form.phone.trim() || null,
+      email: form.email.trim() || null,
+      passport_number: form.passport_number.trim() || null,
+      date_of_birth: form.date_of_birth || null,
+      nationality: form.nationality.trim() || null,
+      status: form.status,
+      preferences: form.preferences.trim() || null,
+    }).eq('id', client.id)
+    setSaving(false)
+    if (error) { setError(error.message); return }
+    onSaved()
+  }
+
+  const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 500, color: '#666', marginBottom: 4, display: 'block' }
+  const inp: React.CSSProperties = { width: '100%', padding: '8px 11px', border: '0.5px solid #d0d0d0', borderRadius: 8, fontSize: 13, outline: 'none', background: '#fafafa', boxSizing: 'border-box' }
+
+  return (
+    <ModalShell title="Edit Client" onClose={onClose}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div>
+          <label style={lbl}>Full Name *</label>
+          <input style={inp} value={form.full_name} onChange={e => s('full_name', e.target.value)} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div><label style={lbl}>Phone</label><input style={inp} value={form.phone} onChange={e => s('phone', e.target.value)} /></div>
+          <div><label style={lbl}>Email</label><input style={inp} value={form.email} onChange={e => s('email', e.target.value)} /></div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div><label style={lbl}>Passport Number</label><input style={inp} value={form.passport_number} onChange={e => s('passport_number', e.target.value)} /></div>
+          <div><label style={lbl}>Date of Birth</label><input type="date" style={inp} value={form.date_of_birth || ''} onChange={e => s('date_of_birth', e.target.value)} /></div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div><label style={lbl}>Nationality</label><input style={inp} value={form.nationality} onChange={e => s('nationality', e.target.value)} /></div>
+          <div>
+            <label style={lbl}>Status</label>
+            <select style={{ ...inp, cursor: 'pointer' }} value={form.status} onChange={e => s('status', e.target.value)}>
+              <option value="lead">Lead</option>
+              <option value="active">Active Client</option>
+              <option value="past">Past Client</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label style={lbl}>Preferences</label>
+          <input style={inp} value={form.preferences} onChange={e => s('preferences', e.target.value)} placeholder="Dietary, seating, special requests..." />
+        </div>
+        {error && <div style={{ fontSize: 12, color: '#A32D2D' }}>{error}</div>}
+      </div>
+      <ModalFooter saving={saving} onSave={handleSave} onClose={onClose} saveLabel="Save Changes" />
+    </ModalShell>
+  )
+}
+
+// ============ ADD TRAVELER MODAL ============
+function AddTravelerModal({ clientId, onClose, onSaved }: { clientId: string; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState({
+    full_name: '', type: 'adult', age: '', passport_number: '', date_of_birth: '', nationality: '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  function s(key: string, value: string) { setForm(f => ({ ...f, [key]: value })) }
+
+  async function handleSave() {
+    if (!form.full_name.trim()) { setError('Name is required.'); return }
+    setSaving(true); setError('')
+    const { error } = await supabase.from('travelers').insert({
+      client_id: clientId,
+      full_name: form.full_name.trim(),
+      type: form.type,
+      age: form.type === 'child' && form.age ? parseInt(form.age) : null,
+      passport_number: form.passport_number.trim() || null,
+      date_of_birth: form.date_of_birth || null,
+      nationality: form.nationality.trim() || null,
+      is_lead: false,
+    })
+    setSaving(false)
+    if (error) { setError(error.message); return }
+    onSaved()
+  }
+
+  const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 500, color: '#666', marginBottom: 4, display: 'block' }
+  const inp: React.CSSProperties = { width: '100%', padding: '8px 11px', border: '0.5px solid #d0d0d0', borderRadius: 8, fontSize: 13, outline: 'none', background: '#fafafa', boxSizing: 'border-box' }
+
+  return (
+    <ModalShell title="Add Traveler" onClose={onClose}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div>
+          <label style={lbl}>Full Name *</label>
+          <input style={inp} value={form.full_name} onChange={e => s('full_name', e.target.value)} placeholder="As in passport" />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div>
+            <label style={lbl}>Type</label>
+            <select style={{ ...inp, cursor: 'pointer' }} value={form.type} onChange={e => s('type', e.target.value)}>
+              <option value="adult">Adult</option>
+              <option value="child">Child</option>
+            </select>
+          </div>
+          {form.type === 'child' && (
+            <div><label style={lbl}>Age</label><input type="number" style={inp} value={form.age} onChange={e => s('age', e.target.value)} placeholder="Age" /></div>
+          )}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div><label style={lbl}>Passport Number</label><input style={inp} value={form.passport_number} onChange={e => s('passport_number', e.target.value)} /></div>
+          <div><label style={lbl}>Date of Birth</label><input type="date" style={inp} value={form.date_of_birth} onChange={e => s('date_of_birth', e.target.value)} /></div>
+        </div>
+        <div>
+          <label style={lbl}>Nationality</label>
+          <input style={inp} value={form.nationality} onChange={e => s('nationality', e.target.value)} />
+        </div>
+        {error && <div style={{ fontSize: 12, color: '#A32D2D' }}>{error}</div>}
+      </div>
+      <ModalFooter saving={saving} onSave={handleSave} onClose={onClose} saveLabel="Add Traveler" />
+    </ModalShell>
+  )
+}
+
+// ============ SHARED MODAL CHROME ============
+function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 460, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '0.5px solid #f0f0f0' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 600 }}>{title}</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999', display: 'flex' }}><X size={18} /></button>
+        </div>
+        <div style={{ padding: 20 }}>{children}</div>
+      </div>
+    </div>
+  )
+}
+
+function ModalFooter({ saving, onSave, onClose, saveLabel }: { saving: boolean; onSave: () => void; onClose: () => void; saveLabel: string }) {
+  return (
+    <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+      <button onClick={onSave} disabled={saving} style={{ flex: 1, background: '#1a2a3a', color: '#fff', border: 'none', borderRadius: 8, padding: '10px', cursor: saving ? 'default' : 'pointer', fontWeight: 600, fontSize: 13, opacity: saving ? 0.7 : 1 }}>
+        {saving ? 'Saving…' : saveLabel}
+      </button>
+      <button onClick={onClose} style={{ background: '#fff', color: '#555', border: '0.5px solid #d0d0d0', borderRadius: 8, padding: '10px 18px', cursor: 'pointer', fontWeight: 500, fontSize: 13 }}>
+        Cancel
+      </button>
+    </div>
+  )
+}
