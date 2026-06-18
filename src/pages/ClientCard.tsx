@@ -304,9 +304,9 @@ function VoucherModal({ booking: b, client, travelers, onClose }: any) {
   const details = b.details || {}
 
   return (
-    <div style={s.overlay}>
+    <div style={s.overlay} id="voucher-print-root">
       <div style={{ maxWidth:860, margin:'0 auto' }}>
-        <div style={{ display:'flex', gap:8, marginBottom:12, justifyContent:'flex-end' }}>
+        <div style={{ display:'flex', gap:8, marginBottom:12, justifyContent:'flex-end' }} className="no-print">
           <button onClick={() => window.print()} style={{ padding:'8px 18px', background:'#f5c842', border:'none', borderRadius:8, fontWeight:700, fontSize:13, cursor:'pointer' }}>🖨 Print / Save PDF</button>
           <button onClick={onClose} style={{ padding:'8px 16px', background:'#fff', border:'0.5px solid #ccc', borderRadius:8, fontSize:13, cursor:'pointer' }}>✕ Close</button>
         </div>
@@ -442,7 +442,27 @@ function VoucherModal({ booking: b, client, travelers, onClose }: any) {
           </div>
         </div>
       </div>
-      <style>{`@media print{body>*:not(.voucher-print){display:none!important}}`}</style>
+      <style>{`
+        @media print {
+          /* Hide everything by default */
+          body * { visibility: hidden !important; }
+          /* Show only the voucher and everything inside it */
+          #voucher-print-root, #voucher-print-root * { visibility: visible !important; }
+          /* Pull the voucher to the top-left and let it fill the page */
+          #voucher-print-root {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            background: #fff !important;
+            padding: 0 !important;
+            overflow: visible !important;
+          }
+          /* Hide the action buttons when printing */
+          .no-print { display: none !important; }
+          @page { margin: 12mm; }
+        }
+      `}</style>
     </div>
   )
 }
