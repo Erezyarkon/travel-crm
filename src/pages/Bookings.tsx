@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Search, BedDouble, Car, Bus, Map, Ticket, UtensilsCrossed, Plane, Shield,
+  Search, BedDouble, Car, Bus, Map, Ticket, UtensilsCrossed, Plane, Shield, Download,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { exportToCsv } from '../lib/exportCsv'
 
 const BOOKING_TYPES: Record<string, { label: string; icon: any; color: string; bg: string }> = {
   hotel:      { label: 'Hotel',      icon: BedDouble,       color: '#185FA5', bg: '#E6F1FB' },
@@ -110,6 +111,18 @@ export default function Bookings() {
             {totalValue > 0 && <> · ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })} total</>}
           </p>
         </div>
+        <button onClick={() => exportToCsv('bookings', filtered, [
+          { header: 'File Number', value: b => b.file_number },
+          { header: 'Client', value: b => b.clients?.full_name || '' },
+          { header: 'Type', value: b => BOOKING_TYPES[b.type]?.label || b.type },
+          { header: 'Service', value: b => b.service_name },
+          { header: 'Date', value: b => { const d = bookingDate(b); return d ? new Date(d).toLocaleDateString('en-GB') : '' } },
+          { header: 'Status', value: b => STATUS_INFO[b.status]?.label || b.status },
+          { header: 'Price (USD)', value: b => b.total_price || '' },
+          { header: 'Deposit Paid', value: b => b.deposit_paid || '' },
+        ])} disabled={filtered.length === 0} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', color: '#555', border: '0.5px solid #d0d0d0', borderRadius: 8, padding: '9px 14px', cursor: filtered.length === 0 ? 'default' : 'pointer', fontWeight: 500, fontSize: 13, opacity: filtered.length === 0 ? 0.5 : 1 }}>
+          <Download size={15} /> Export
+        </button>
       </div>
 
       <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #e5e5e5', overflow: 'hidden' }}>

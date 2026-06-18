@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, Download } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import { exportToCsv } from '../lib/exportCsv'
 
 export default function Clients() {
   const navigate = useNavigate()
@@ -47,9 +48,23 @@ export default function Clients() {
           <h1 style={{ fontSize: 22, fontWeight: 600 }}>Clients</h1>
           <p style={{ color: '#888', fontSize: 13, marginTop: 2 }}>{clients.length} clients in system</p>
         </div>
-        <button onClick={() => navigate('/clients/new')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#1a2a3a', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
-          <Plus size={15} /> New Client File
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => exportToCsv('clients', filtered, [
+            { header: 'File Number', value: c => c.file_number },
+            { header: 'Full Name', value: c => c.full_name },
+            { header: 'Phone', value: c => c.phone },
+            { header: 'Email', value: c => c.email },
+            { header: 'Status', value: c => c.status },
+            { header: 'Nationality', value: c => c.nationality },
+            { header: 'Passport', value: c => c.passport_number },
+            { header: 'Created', value: c => c.created_at ? new Date(c.created_at).toLocaleDateString('en-GB') : '' },
+          ])} disabled={filtered.length === 0} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', color: '#555', border: '0.5px solid #d0d0d0', borderRadius: 8, padding: '9px 14px', cursor: filtered.length === 0 ? 'default' : 'pointer', fontWeight: 500, fontSize: 13, opacity: filtered.length === 0 ? 0.5 : 1 }}>
+            <Download size={15} /> Export
+          </button>
+          <button onClick={() => navigate('/clients/new')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#1a2a3a', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+            <Plus size={15} /> New Client File
+          </button>
+        </div>
       </div>
 
       <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #e5e5e5', overflow: 'hidden' }}>
