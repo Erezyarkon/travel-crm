@@ -2,6 +2,7 @@ import React from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Users, CalendarDays, Building2, BarChart3, Settings, Plane, Plus, LogOut } from 'lucide-react'
 import { useAuth } from '../lib/auth'
+import GlobalSearch from './GlobalSearch'
 
 const ROLE_LABELS: Record<string, string> = { admin: 'Administrator', agent: 'Agent', viewer: 'Viewer' }
 
@@ -69,8 +70,13 @@ export default function Layout() {
         </div>
       </aside>
 
-      <main style={{ flex: 1, overflow: 'auto' }}>
-        <Outlet />
+      <main style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(247,248,250,0.85)', backdropFilter: 'blur(8px)', borderBottom: '0.5px solid #e8e8e8', padding: '10px 24px', display: 'flex', justifyContent: 'center' }}>
+          <GlobalSearch />
+        </div>
+        <div style={{ flex: 1 }}>
+          <Outlet />
+        </div>
       </main>
     </div>
   )
