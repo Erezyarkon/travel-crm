@@ -16,7 +16,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; color: string }> = {
   Other: { bg: '#F1EFE8', color: '#5F5E5A' },
 }
 
-export default function DocumentsPanel({ clientId }: { clientId: string }) {
+export default function DocumentsPanel({ clientId, onUploaded }: { clientId: string; onUploaded?: (fileName: string, category: string) => void }) {
   const { user } = useAuth()
   const [docs, setDocs] = useState<ClientDocument[]>([])
   const [loading, setLoading] = useState(true)
@@ -42,6 +42,7 @@ export default function DocumentsPanel({ clientId }: { clientId: string }) {
       if (f.size > 25 * 1024 * 1024) { setError(`${f.name} is larger than 25MB.`); continue }
       const { error } = await uploadDocument(clientId, f, category, user?.id || null)
       if (error) setError(error)
+      else if (onUploaded) onUploaded(f.name, category)
     }
     setUploading(false)
     if (fileInput.current) fileInput.current.value = ''

@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import { logActivity } from '../lib/activity'
 
 const inp = { width: '100%', padding: '8px 10px', border: '0.5px solid #d0d0d0', borderRadius: 8, fontSize: 13, outline: 'none', background: '#fafafa' } as React.CSSProperties
 const lbl = { fontSize: 11, color: '#555', fontWeight: '500' as const, marginBottom: 4, display: 'block' as const }
 
 export default function NewClient() {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ full_name: '', phone: '', email: '', passport_number: '', date_of_birth: '', nationality: '', status: 'lead', preferences: '' })
   const [travelers, setTravelers] = useState<any[]>([])
@@ -28,6 +29,7 @@ export default function NewClient() {
     if (travelers.length > 0) {
       await supabase.from('travelers').insert(travelers.map((t, i) => ({ ...t, client_id: client.id, is_lead: i === 0, age: t.age ? parseInt(t.age) : null })))
     }
+    await logActivity(client.id, 'created', `Client file ${fileNum} created`, user?.id || null, profile?.full_name || null)
     navigate(`/clients/${client.id}`)
   }
 
