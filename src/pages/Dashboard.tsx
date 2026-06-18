@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users, CalendarDays, DollarSign, TrendingUp, Plus, ChevronRight,
-  AlertCircle, Clock, CreditCard, CheckCircle2,
+  AlertCircle, Clock, CreditCard, CheckCircle2, CalendarClock, CheckSquare,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import { listOpenTasks } from '../lib/tasks'
 
 const statusLabels: Record<string, string> = {
   inquiry: 'Inquiry', quoted: 'Quoted', confirmed: 'Confirmed',
@@ -34,6 +35,7 @@ export default function Dashboard() {
   const [upcoming, setUpcoming] = useState<any[]>([])
   const [unhandledLeads, setUnhandledLeads] = useState<any[]>([])
   const [awaitingPayment, setAwaitingPayment] = useState<any[]>([])
+  const [openTasks, setOpenTasks] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -98,6 +100,10 @@ export default function Dashboard() {
         .map(b => ({ ...b, _client: ownById[b.client_id] }))
         .slice(0, 6)
       setAwaitingPayment(pay)
+
+      // Open tasks (RLS limits agents to their own clients automatically)
+      const tasks = await listOpenTasks()
+      setOpenTasks(tasks.slice(0, 8))
 
       setLoading(false)
     }
@@ -225,9 +231,48 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
+
+            {/* Tasks due */}
+            <div style={card}>
+              <div style={head}>
+                <span style={{ fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <CalendarClock size={15} color="#854F0B" /> Tasks Due
+                </span>
+              </div>
+              {openTasks.length === 0 ? (
+                <div style={{ padding: 22, textAlign: 'center', color: '#aaa', fontSize: 13, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <CheckSquare size={22} color="#cdcdcd" /> All caught up.
+                </div>
+              ) : openTasks.map(t => {
+                const meta = taskDueMeta(t.due_date)
+                return (
+                  <div key={t.id} onClick={() => t.client_id && navigate(`/clients/${t.client_id}`)} style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderBottom: '0.5px solid #f8f8f8' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</div>
+                      <div style={{ fontSize: 11, color: '#888' }}>{t.clients?.full_name || ''}</div>
+                    </div>
+                    {meta && <span style={{ fontSize: 10, padding: '2px 9px', borderRadius: 20, background: meta.bg, color: meta.color, fontWeight: 600, whiteSpace: 'nowrap' }}>{meta.label}</span>}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
     </div>
   )
+}
+
+function taskDueMeta(due: string | null) {
+  if (!due) return null
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const d = new Date(due); d.setHours(0, 0, 0, 0)
+  const diff = Math.round((d.getTime() - today.getTime()) / 86400000)
+  const txt = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+  if (diff < 0) return { label: 'Overdue', color: '#A32D2D', bg: '#FBEAEA' }
+  if (diff === 0) return { label: 'Today', color: '#854F0B', bg: '#FAEEDA' }
+  if (diff === 1) return { label: 'Tomorrow', color: '#854F0B', bg: '#FAEEDA' }
+  return { label: `in ${diff}d`, color: '#185FA5', bg: '#E6F1FB' }
 }
