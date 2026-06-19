@@ -43,15 +43,16 @@ export async function deletePayment(id: string): Promise<{ error: string | null 
   return { error: error ? error.message : null }
 }
 
-// Update the supplier cost + currency on a booking
+// Update the supplier cost + currency + supplier on a booking
 export async function updateBookingFinance(
   bookingId: string,
   costPrice: number | null,
-  currency: string
+  currency: string,
+  supplierId: string | null
 ): Promise<{ error: string | null }> {
   const { error } = await supabase
     .from('bookings')
-    .update({ cost_price: costPrice, currency })
+    .update({ cost_price: costPrice, currency, supplier_id: supplierId || null })
     .eq('id', bookingId)
   return { error: error ? error.message : null }
 }

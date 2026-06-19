@@ -5,6 +5,7 @@ import {
   updateBookingFinance, sumPayments,
 } from '../lib/payments'
 import { CURRENCIES, formatMoney } from '../lib/currency'
+import { Supplier, listSuppliers } from '../lib/suppliers'
 import { useAuth } from '../lib/auth'
 
 export default function FinancialPanel({
@@ -30,6 +31,12 @@ export default function FinancialPanel({
   const [currency, setCurrency] = useState(booking.currency || 'USD')
   const [cost, setCost] = useState(booking.cost_price != null ? String(booking.cost_price) : '')
   const [savingFin, setSavingFin] = useState(false)
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [supplierId, setSupplierId] = useState(booking.supplier_id || '')
+
+  useEffect(() => {
+    if (profile?.role === 'admin') listSuppliers().then(setSuppliers)
+  }, [profile])
 
   async function refresh() {
     setPayments(await listPayments(booking.id))
@@ -63,7 +70,7 @@ export default function FinancialPanel({
 
   async function saveFinance() {
     setSavingFin(true)
-    await updateBookingFinance(booking.id, costNum, currency)
+    await updateBookingFinance(booking.id, costNum, currency, supplierId || null)
     setSavingFin(false)
     onChange?.()
   }
@@ -93,17 +100,33 @@ export default function FinancialPanel({
           : <Cell label="Status" value={balance <= 0 ? 'Paid' : 'Open'} color={balance <= 0 ? '#0F6E56' : '#854F0B'} />}
       </div>
 
-      {/* Supplier cost (admin only) */}
+      {/* Supplier + cost (admin only) */}
       {isAdmin && (
-        <div style={{ padding: '10px 16px', borderTop: '0.5px solid #f0f0f0', display: 'flex', alignItems: 'flex-end', gap: 10 }}>
-          <div style={{ flex: 1 }}>
-            <label style={lbl}>Supplier cost ({currency})</label>
-            <input style={inp} type="number" value={cost} onChange={e => setCost(e.target.value)} placeholder="0.00" />
+        <div style={{ padding: '10px 16px', borderTop: '0.5px solid #f0f0f0' }}>
+          <div style={{ marginBottom: 8 }}>
+            <label style={lbl}>Supplier</label>
+            <select style={{ ...inp, cursor: 'pointer' }} value={supplierId} onChange={e => setSupplierId(e.target.value)}>
+              <option value="">— No supplier —</option>
+              {[...suppliers].sort((a, b) => {
+                // surface suppliers matching this booking's type first
+                const am = a.type === booking.type ? 0 : 1
+                const bm = b.type === booking.type ? 0 : 1
+                return am - bm || a.name.localeCompare(b.name)
+              }).map(s => (
+                <option key={s.id} value={s.id}>{s.name}{s.type === booking.type ? '' : ` (${s.type})`}</option>
+              ))}
+            </select>
           </div>
-          <button onClick={saveFinance} disabled={savingFin}
-            style={{ background: '#1a2a3a', color: '#fff', border: 'none', borderRadius: 7, padding: '7px 14px', cursor: 'pointer', fontWeight: 600, fontSize: 12, opacity: savingFin ? 0.7 : 1 }}>
-            {savingFin ? '…' : 'Save'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label style={lbl}>Supplier cost ({currency})</label>
+              <input style={inp} type="number" value={cost} onChange={e => setCost(e.target.value)} placeholder="0.00" />
+            </div>
+            <button onClick={saveFinance} disabled={savingFin}
+              style={{ background: '#1a2a3a', color: '#fff', border: 'none', borderRadius: 7, padding: '7px 14px', cursor: 'pointer', fontWeight: 600, fontSize: 12, opacity: savingFin ? 0.7 : 1 }}>
+              {savingFin ? '…' : 'Save'}
+            </button>
+          </div>
         </div>
       )}
 

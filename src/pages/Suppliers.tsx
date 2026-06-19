@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Plus, Search, Building2, Car, Bus, Map, Ticket, UtensilsCrossed, Plane, Shield, Star, Phone, Mail, Globe, FileText, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import SupplierBookings from '../components/SupplierBookings'
 
 const SUPPLIER_TYPES = [
   { key: 'hotel',     label: 'Hotel',          icon: Building2,       color: '#185FA5', bg: '#E6F1FB' },
@@ -125,6 +126,7 @@ export default function Suppliers() {
                     {supplier.contract_url && <div><div style={{ fontSize: 9, color: '#aaa', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 2 }}>Contract / Rates</div><a href={supplier.contract_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#185FA5', display: 'flex', alignItems: 'center', gap: 4 }}><FileText size={11} /> View file</a></div>}
                     {supplier.notes && <div style={{ gridColumn: '1/-1' }}><div style={{ fontSize: 9, color: '#aaa', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 2 }}>Notes</div><div style={{ fontSize: 12, color: '#333', background: '#fff', border: '0.5px solid #eee', borderRadius: 6, padding: '6px 8px' }}>{supplier.notes}</div></div>}
                   </div>
+                  <SupplierBookings supplierId={supplier.id} />
                 </div>
               )}
             </div>
