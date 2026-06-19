@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Building2, Save, Check, Users, UserPlus, KeyRound } from 'lucide-react'
+import { Building2, Save, Check, Users, UserPlus, KeyRound, Receipt } from 'lucide-react'
 import { CompanySettings, DEFAULT_SETTINGS, loadSettings, saveSettings } from '../lib/companySettings'
 import { useAuth, Profile, Role } from '../lib/auth'
 import { listProfiles, createUser, updateUserRole, sendPasswordReset } from '../lib/team'
@@ -106,6 +106,61 @@ export default function Settings() {
             {saved ? <><Check size={15} /> Saved</> : <><Save size={15} /> {saving ? 'Saving…' : 'Save Changes'}</>}
           </button>
           {error && <span style={{ fontSize: 12, color: '#A32D2D' }}>{error}</span>}
+        </div>
+      </div>
+
+      {/* Business & Invoicing */}
+      <div style={{ ...card, marginBottom: 20 }}>
+        <div style={head}>
+          <Receipt size={16} color="#854F0B" />
+          <span style={{ fontWeight: 600, fontSize: 14 }}>Business &amp; Invoicing</span>
+        </div>
+        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <label style={label}>Legal / Registered Name</label>
+              <input style={inp} value={form.legal_name} onChange={e => set('legal_name', e.target.value)} placeholder="Company Ltd." />
+            </div>
+            <div>
+              <label style={label}>Business Number (ח.פ. / ע.מ.)</label>
+              <input style={inp} value={form.business_number} onChange={e => set('business_number', e.target.value)} placeholder="515123456" />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <label style={label}>Business Type</label>
+              <select style={{ ...inp, cursor: 'pointer' }} value={form.business_type} onChange={e => set('business_type', e.target.value)}>
+                <option value="ltd">Company (Ltd. / בע"מ)</option>
+                <option value="licensed">Licensed Dealer (עוסק מורשה)</option>
+                <option value="exempt">Exempt Dealer (עוסק פטור)</option>
+              </select>
+            </div>
+            <div>
+              <label style={label}>VAT Rate (%)</label>
+              <input style={inp} type="number" value={form.vat_percent} onChange={e => set('vat_percent', Number(e.target.value) as any)} placeholder="18" />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <label style={label}>Invoice Prefix</label>
+              <input style={inp} value={form.invoice_prefix} onChange={e => set('invoice_prefix', e.target.value)} placeholder="INV" />
+            </div>
+            <div>
+              <label style={label}>Next Invoice Number</label>
+              <input style={inp} type="number" value={form.next_invoice_number} onChange={e => set('next_invoice_number', Number(e.target.value) as any)} placeholder="1001" />
+            </div>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#555', cursor: 'pointer' }}>
+            <input type="checkbox" checked={form.default_vat_on} onChange={e => set('default_vat_on', e.target.checked as any)} />
+            Add VAT by default on new invoices
+            <span style={{ fontSize: 11, color: '#aaa' }}>(tourism is usually 0% — leave off)</span>
+          </label>
+        </div>
+        <div style={{ padding: '14px 20px', borderTop: '0.5px solid #f0f0f0' }}>
+          <button onClick={handleSave} disabled={saving}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: saved ? '#0F6E56' : '#1a2a3a', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: saving ? 'default' : 'pointer', fontWeight: 600, fontSize: 13, opacity: saving ? 0.7 : 1 }}>
+            {saved ? <><Check size={15} /> Saved</> : <><Save size={15} /> {saving ? 'Saving…' : 'Save Changes'}</>}
+          </button>
         </div>
       </div>
 

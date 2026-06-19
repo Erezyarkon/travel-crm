@@ -10,6 +10,7 @@ import TasksPanel from '../components/TasksPanel'
 import { logActivity } from '../lib/activity'
 import { getCachedSettings, loadSettings } from '../lib/companySettings'
 import FinancialPanel from '../components/FinancialPanel'
+import InvoicePanel from '../components/InvoicePanel'
 import { formatMoney } from '../lib/currency'
 import { listPayments, sumPayments } from '../lib/payments'
 
@@ -187,6 +188,9 @@ export default function ClientCard() {
 
             {/* TASKS */}
             <TasksPanel clientId={id!} />
+
+            {/* INVOICES */}
+            <InvoicePanel clientId={id!} bookings={bookings} />
 
             {/* ALL BOOKINGS SUMMARY */}
             {bookings.length > 0 && (
