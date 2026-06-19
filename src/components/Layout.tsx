@@ -1,6 +1,6 @@
 import React from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Users, CalendarDays, Building2, BarChart3, Settings, Plane, Plus, LogOut } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, CalendarRange, Building2, BarChart3, Settings, Plane, Plus, LogOut } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import GlobalSearch from './GlobalSearch'
 
@@ -10,6 +10,7 @@ const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/clients',   icon: Users,           label: 'Clients' },
   { to: '/bookings',  icon: CalendarDays,    label: 'Bookings' },
+  { to: '/calendar',  icon: CalendarRange,   label: 'Calendar' },
   { to: '/suppliers', icon: Building2,       label: 'Suppliers' },
   { to: '/reports',   icon: BarChart3,       label: 'Reports' },
   { to: '/settings',  icon: Settings,        label: 'Settings' },
