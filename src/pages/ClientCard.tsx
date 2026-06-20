@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, BedDouble, Car, Bus, Map, Ticket, UtensilsCrossed, Plane, Shield, Pencil, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth, Profile } from '../lib/auth'
+import { useToast } from '../lib/toast'
 import { listProfiles } from '../lib/team'
 import DocumentsPanel from '../components/DocumentsPanel'
 import ActivityPanel from '../components/ActivityPanel'
@@ -56,6 +57,7 @@ export default function ClientCard() {
   const [loading, setLoading] = useState(true)
   const [voucherBooking, setVoucherBooking] = useState<any>(null)
   const { profile, user } = useAuth()
+  const toast = useToast()
   const [agents, setAgents] = useState<Profile[]>([])
   const [showEditClient, setShowEditClient] = useState(false)
   const [showAddTraveler, setShowAddTraveler] = useState(false)
@@ -113,10 +115,10 @@ export default function ClientCard() {
         <VoucherModal booking={voucherBooking} client={client} travelers={allTravelers} onClose={() => setVoucherBooking(null)} />
       )}
       {showEditClient && (
-        <EditClientModal client={client} onClose={() => setShowEditClient(false)} onSaved={async () => { setShowEditClient(false); await reloadData(); await logActivity(id!, 'edit', 'Client details updated', user?.id || null, profile?.full_name || null); bumpActivity() }} />
+        <EditClientModal client={client} onClose={() => setShowEditClient(false)} onSaved={async () => { setShowEditClient(false); await reloadData(); await logActivity(id!, 'edit', 'Client details updated', user?.id || null, profile?.full_name || null); bumpActivity(); toast.success('Client updated') }} />
       )}
       {showAddTraveler && (
-        <AddTravelerModal clientId={id!} onClose={() => setShowAddTraveler(false)} onSaved={async (name?: string) => { setShowAddTraveler(false); await reloadData(); await logActivity(id!, 'traveler', `Traveler added${name ? `: ${name}` : ''}`, user?.id || null, profile?.full_name || null); bumpActivity() }} />
+        <AddTravelerModal clientId={id!} onClose={() => setShowAddTraveler(false)} onSaved={async (name?: string) => { setShowAddTraveler(false); await reloadData(); await logActivity(id!, 'traveler', `Traveler added${name ? `: ${name}` : ''}`, user?.id || null, profile?.full_name || null); bumpActivity(); toast.success('Traveler added') }} />
       )}
       <div style={{ padding: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
@@ -241,10 +243,12 @@ export default function ClientCard() {
               {showNewBooking && (
                 <BookingForm type={activeType} clientId={id!} fileNumber={client.file_number} travelers={allTravelers}
                   onSave={async (b: any) => {
-                    const { data } = await supabase.from('bookings').insert(b).select().single()
+                    const { data, error } = await supabase.from('bookings').insert(b).select().single()
+                    if (error) { toast.error('Could not save booking'); return }
                     if (data) { setBookings(bk => [data, ...bk]); setShowNewBooking(false)
                       await logActivity(id!, 'booking', `New ${BOOKING_TYPES.find(bt => bt.key === data.type)?.label || data.type} booking: ${data.service_name || ''}`, user?.id || null, profile?.full_name || null)
                       bumpActivity()
+                      toast.success('Booking created')
                     }
                   }}
                   onCancel={() => setShowNewBooking(false)}
@@ -259,12 +263,14 @@ export default function ClientCard() {
                 editingBooking?.id === b.id ? (
                   <BookingForm key={b.id} type={b.type} clientId={id!} fileNumber={client.file_number} travelers={allTravelers} existing={b}
                     onSave={async (upd: any) => {
-                      const { data } = await supabase.from('bookings').update(upd).eq('id', b.id).select().single()
+                      const { data, error } = await supabase.from('bookings').update(upd).eq('id', b.id).select().single()
+                      if (error) { toast.error('Could not save changes'); return }
                       if (data) {
                         setBookings(bks => bks.map(bk => bk.id === b.id ? data : bk))
                         setEditingBooking(null)
                         await logActivity(id!, 'edit', `Booking updated: ${data.service_name || data.type}`, user?.id || null, profile?.full_name || null)
                         bumpActivity()
+                        toast.success('Booking updated')
                       }
                     }}
                     onCancel={() => setEditingBooking(null)}
@@ -279,6 +285,7 @@ export default function ClientCard() {
                     setBookings(bks => bks.map(bk => bk.id === b.id ? { ...bk, status: newStatus } : bk))
                     await logActivity(id!, 'status', `${b.service_name || 'Booking'} → ${STATUS_LABELS[newStatus] || newStatus}`, user?.id || null, profile?.full_name || null)
                     bumpActivity()
+                    toast.success(`Status: ${STATUS_LABELS[newStatus] || newStatus}`)
                   }}
                 />
                 )

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Building2, Save, Check, Users, UserPlus, KeyRound, Receipt } from 'lucide-react'
 import { CompanySettings, DEFAULT_SETTINGS, loadSettings, saveSettings } from '../lib/companySettings'
 import { useAuth, Profile, Role } from '../lib/auth'
+import { useToast } from '../lib/toast'
 import { listProfiles, createUser, updateUserRole, sendPasswordReset } from '../lib/team'
 
 const CURRENCIES = ['USD', 'EUR', 'ILS', 'GBP']
@@ -14,6 +15,7 @@ const ROLE_COLORS: Record<Role, { bg: string; color: string }> = {
 export default function Settings() {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
+  const toast = useToast()
 
   // ---- Company info ----
   const [form, setForm] = useState<CompanySettings>(DEFAULT_SETTINGS)
@@ -40,8 +42,8 @@ export default function Settings() {
     setSaving(true); setError('')
     const ok = await saveSettings(form)
     setSaving(false)
-    if (ok) { setSaved(true); setTimeout(() => setSaved(false), 2500) }
-    else setError('Could not save. Make sure the "settings" table exists in Supabase.')
+    if (ok) { setSaved(true); setTimeout(() => setSaved(false), 2500); toast.success('Settings saved') }
+    else { setError('Could not save. Make sure the "settings" table exists in Supabase.'); toast.error('Could not save settings') }
   }
 
   const label: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: '#555', marginBottom: 5, display: 'block' }

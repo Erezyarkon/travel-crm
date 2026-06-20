@@ -6,6 +6,7 @@ import {
 import { loadSettings } from '../lib/companySettings'
 import { formatMoney } from '../lib/currency'
 import { useAuth } from '../lib/auth'
+import { useToast } from '../lib/toast'
 import InvoiceModal from './InvoiceModal'
 
 interface DraftLine {
@@ -20,6 +21,7 @@ const newLineId = () => `line_${Date.now()}_${lineCounter++}`
 
 export default function InvoicePanel({ clientId, client, bookings }: { clientId: string; client: any; bookings: any[] }) {
   const { profile } = useAuth()
+  const toast = useToast()
   const isAdmin = profile?.role === 'admin'
   const [viewing, setViewing] = useState<Invoice | null>(null)
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -98,15 +100,17 @@ export default function InvoicePanel({ clientId, client, bookings }: { clientId:
     setBusy(true); setMsg('')
     const { error } = await createInvoice({ clientId, currency, lines, vatOn, notes: notes.trim() || undefined })
     setBusy(false)
-    if (error) { setMsg(error); return }
+    if (error) { setMsg(error); toast.error('Could not create invoice'); return }
     setDraftLines([]); setNotes(''); setCreating(false)
     refresh()
+    toast.success('Invoice created')
   }
 
   async function handleDelete(inv: Invoice) {
     if (!window.confirm(`Delete invoice ${inv.invoice_number}? This cannot be undone.`)) return
     await deleteInvoice(inv.id)
     refresh()
+    toast.info('Invoice deleted')
   }
 
   if (!isAdmin) return null  // invoicing is admin-only for now

@@ -12,6 +12,7 @@ import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
 import { AuthProvider, useAuth } from './lib/auth'
+import { ToastProvider } from './lib/toast'
 import './App.css'
 
 function AppRoutes() {
@@ -47,9 +48,11 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   )
 }
