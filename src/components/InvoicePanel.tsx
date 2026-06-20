@@ -189,10 +189,12 @@ export default function InvoicePanel({ clientId, client, bookings }: { clientId:
             <input style={{ ...cellInp, marginTop: 3 }} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Payment terms, reference, etc." />
           </div>
 
-          <div style={{ background: '#fff', border: '0.5px solid #eee', borderRadius: 8, padding: '10px 12px', marginBottom: 12 }}>
-            <Row label="Subtotal" value={formatMoney(subtotal, currency)} />
-            {vatOn && <Row label={`VAT (${vatPercent}%)`} value={formatMoney(vat_amount, currency)} />}
-            <Row label="Total" value={formatMoney(total, currency)} bold />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+            <div style={{ background: '#fff', border: '0.5px solid #eee', borderRadius: 8, padding: '10px 12px', width: 280 }}>
+              <Row label="Subtotal" value={formatMoney(subtotal, currency)} />
+              {vatOn && <Row label={`VAT (${vatPercent}%)`} value={formatMoney(vat_amount, currency)} />}
+              <Row label="Total" value={formatMoney(total, currency)} bold />
+            </div>
           </div>
 
           {msg && <div style={{ fontSize: 11, color: '#A32D2D', marginBottom: 10 }}>{msg}</div>}

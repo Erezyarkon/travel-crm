@@ -124,7 +124,7 @@ export default function ClientCard() {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16 }}>
           {/* CLIENT CARD */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #e5e5e5', overflow: 'hidden' }}>
@@ -188,9 +188,6 @@ export default function ClientCard() {
 
             {/* TASKS */}
             <TasksPanel clientId={id!} />
-
-            {/* INVOICES */}
-            <InvoicePanel clientId={id!} client={client} bookings={bookings} />
 
             {/* ALL BOOKINGS SUMMARY */}
             {bookings.length > 0 && (
@@ -274,6 +271,11 @@ export default function ClientCard() {
             {/* ACTIVITY TIMELINE */}
             <ActivityPanel clientId={id!} refreshKey={activityKey} />
           </div>
+        </div>
+
+        {/* INVOICES — full width */}
+        <div style={{ marginTop: 16 }}>
+          <InvoicePanel clientId={id!} client={client} bookings={bookings} />
         </div>
       </div>
     </>

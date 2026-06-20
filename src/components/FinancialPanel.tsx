@@ -6,6 +6,7 @@ import {
 } from '../lib/payments'
 import { CURRENCIES, formatMoney } from '../lib/currency'
 import { Supplier, listSuppliers } from '../lib/suppliers'
+import PaymentRequestPanel from './PaymentRequestPanel'
 import { useAuth } from '../lib/auth'
 
 export default function FinancialPanel({
@@ -185,6 +186,8 @@ export default function FinancialPanel({
           </div>
         )}
       </div>
+
+      <PaymentRequestPanel booking={booking} currency={currency} balance={balance} onChange={() => { refresh(); onChange?.() }} />
     </div>
   )
 }
