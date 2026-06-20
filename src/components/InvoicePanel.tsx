@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react'
-import { FileText, Plus, Trash2, Check } from 'lucide-react'
+import { FileText, Plus, Trash2, Check, Printer } from 'lucide-react'
 import {
   Invoice, InvoiceLine, listInvoices, createInvoice, deleteInvoice, computeTotals,
 } from '../lib/invoices'
 import { loadSettings } from '../lib/companySettings'
 import { formatMoney } from '../lib/currency'
 import { useAuth } from '../lib/auth'
+import InvoiceModal from './InvoiceModal'
 
-export default function InvoicePanel({ clientId, bookings }: { clientId: string; bookings: any[] }) {
+export default function InvoicePanel({ clientId, client, bookings }: { clientId: string; client: any; bookings: any[] }) {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
+  const [viewing, setViewing] = useState<Invoice | null>(null)
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
@@ -136,6 +138,9 @@ export default function InvoicePanel({ clientId, bookings }: { clientId: string;
                 </div>
               </div>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#1a2a3a' }}>{formatMoney(inv.total, inv.currency)}</div>
+              <button onClick={() => setViewing(inv)} title="View / Print" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 3, display: 'flex', color: '#185FA5' }}>
+                <Printer size={14} />
+              </button>
               <button onClick={() => handleDelete(inv)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 3, display: 'flex', color: '#ccc' }}>
                 <Trash2 size={13} />
               </button>
@@ -143,6 +148,8 @@ export default function InvoicePanel({ clientId, bookings }: { clientId: string;
           ))}
         </div>
       )}
+
+      {viewing && <InvoiceModal invoice={viewing} client={client} onClose={() => setViewing(null)} />}
     </div>
   )
 }

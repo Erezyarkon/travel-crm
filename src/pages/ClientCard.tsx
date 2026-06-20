@@ -190,7 +190,7 @@ export default function ClientCard() {
             <TasksPanel clientId={id!} />
 
             {/* INVOICES */}
-            <InvoicePanel clientId={id!} bookings={bookings} />
+            <InvoicePanel clientId={id!} client={client} bookings={bookings} />
 
             {/* ALL BOOKINGS SUMMARY */}
             {bookings.length > 0 && (
