@@ -4,6 +4,7 @@ import {
   Search, BedDouble, Car, Bus, Map, Ticket, UtensilsCrossed, Plane, Shield, Download,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { SkeletonRows } from '../components/Skeleton'
 import { exportToCsv } from '../lib/exportCsv'
 
 const BOOKING_TYPES: Record<string, { label: string; icon: any; color: string; bg: string }> = {
@@ -149,7 +150,7 @@ export default function Bookings() {
 
         {/* Table */}
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>Loading...</div>
+          <SkeletonRows rows={7} />
         ) : filtered.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>
             <div style={{ fontSize: 15 }}>No bookings found</div>

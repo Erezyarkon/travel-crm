@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Plus, Search, Building2, Car, Bus, Map, Ticket, UtensilsCrossed, Plane, Shield, Star, Phone, Mail, Globe, FileText, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import SupplierBookings from '../components/SupplierBookings'
+import { SkeletonRows } from '../components/Skeleton'
 
 const SUPPLIER_TYPES = [
   { key: 'hotel',     label: 'Hotel',          icon: Building2,       color: '#185FA5', bg: '#E6F1FB' },
@@ -80,7 +81,7 @@ export default function Suppliers() {
         </div>
 
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>Loading...</div>
+          <SkeletonRows rows={6} />
         ) : filtered.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>
             <div style={{ fontSize: 15, marginBottom: 8 }}>No suppliers found</div>

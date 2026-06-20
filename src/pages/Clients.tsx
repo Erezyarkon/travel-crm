@@ -4,6 +4,7 @@ import { Plus, Search, Download } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { exportToCsv } from '../lib/exportCsv'
+import { SkeletonRows } from '../components/Skeleton'
 
 export default function Clients() {
   const navigate = useNavigate()
@@ -83,7 +84,7 @@ export default function Clients() {
         </div>
 
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>Loading...</div>
+          <SkeletonRows rows={7} />
         ) : filtered.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>
             <div style={{ fontSize: 15, marginBottom: 8 }}>No clients found</div>
