@@ -52,6 +52,7 @@ export default function ClientCard() {
   const [bookings, setBookings] = useState<any[]>([])
   const [activeType, setActiveType] = useState('hotel')
   const [showNewBooking, setShowNewBooking] = useState(false)
+  const [editingBooking, setEditingBooking] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [voucherBooking, setVoucherBooking] = useState<any>(null)
   const { profile, user } = useAuth()
@@ -255,8 +256,23 @@ export default function ClientCard() {
                   No {BOOKING_TYPES.find(b => b.key === activeType)?.label} bookings yet.
                 </div>
               ) : activeBookings.map(b => (
+                editingBooking?.id === b.id ? (
+                  <BookingForm key={b.id} type={b.type} clientId={id!} fileNumber={client.file_number} travelers={allTravelers} existing={b}
+                    onSave={async (upd: any) => {
+                      const { data } = await supabase.from('bookings').update(upd).eq('id', b.id).select().single()
+                      if (data) {
+                        setBookings(bks => bks.map(bk => bk.id === b.id ? data : bk))
+                        setEditingBooking(null)
+                        await logActivity(id!, 'edit', `Booking updated: ${data.service_name || data.type}`, user?.id || null, profile?.full_name || null)
+                        bumpActivity()
+                      }
+                    }}
+                    onCancel={() => setEditingBooking(null)}
+                  />
+                ) : (
                 <BookingRow key={b.id} booking={b}
                   onVoucher={() => setVoucherBooking(b)}
+                  onEdit={() => setEditingBooking(b)}
                   onFinanceChange={() => reloadData()}
                   onStatusChange={async (newStatus: string) => {
                     await supabase.from('bookings').update({ status: newStatus }).eq('id', b.id)
@@ -265,6 +281,7 @@ export default function ClientCard() {
                     bumpActivity()
                   }}
                 />
+                )
               ))}
             </div>
 
@@ -483,7 +500,7 @@ function VoucherModal({ booking: b, client, travelers, onClose }: any) {
 }
 
 /* ─── BOOKING ROW ─────────────────────────────────────────────────────────── */
-function BookingRow({ booking: b, onStatusChange, onVoucher, onFinanceChange }: { booking: any; onStatusChange: (s: string) => void; onVoucher: () => void; onFinanceChange?: () => void }) {
+function BookingRow({ booking: b, onStatusChange, onVoucher, onFinanceChange, onEdit }: { booking: any; onStatusChange: (s: string) => void; onVoucher: () => void; onFinanceChange?: () => void; onEdit?: () => void }) {
   const [showFinance, setShowFinance] = useState(false)
   const stepIdx = STATUS_STEPS.indexOf(b.status)
   const bc = BOOKING_TYPES.find(bt => bt.key === b.type)
@@ -530,6 +547,7 @@ function BookingRow({ booking: b, onStatusChange, onVoucher, onFinanceChange }: 
         {b.status === 'voucher_sent' && <Abtn label="Complete"        color="#0F6E56" bg="#E1F5EE" onClick={() => onStatusChange('completed')} />}
         {!['completed','cancelled'].includes(b.status) && <Abtn label="Cancel" color="#A32D2D" bg="#FCEBEB" onClick={() => onStatusChange('cancelled')} />}
         <Abtn label="📄 View / Print" color="#1a2a3a" bg="#f0f4f8" onClick={onVoucher} />
+        <Abtn label="✏️ Edit" color="#854F0B" bg="#FAEEDA" onClick={() => onEdit?.()} />
         <Abtn label={showFinance ? '💰 Hide Financials' : '💰 Financials'} color="#0F6E56" bg="#E1F5EE" onClick={() => setShowFinance(s => !s)} />
       </div>
       {showFinance && (
@@ -546,7 +564,7 @@ function Abtn({ label, color, bg, onClick }: { label: string; color: string; bg:
 }
 
 /* ─── BOOKING FORM ──────────────────────────────────────────────────────── */
-function BookingForm({ type, clientId, fileNumber, travelers, onSave, onCancel }: any) {
+function BookingForm({ type, clientId, fileNumber, travelers, onSave, onCancel, existing }: any) {
   const inp: React.CSSProperties = { width: '100%', padding: '6px 8px', border: '0.5px solid #d0d0d0', borderRadius: 6, fontSize: 12, outline: 'none', background: '#fafafa', color: '#1a1a1a' }
   const lbl: React.CSSProperties = { fontSize: 10, color: '#555', fontWeight: 500, display: 'block', marginBottom: 3 }
   const pre: React.CSSProperties = { ...inp, background: '#E1F5EE', borderColor: '#5DCAA5', color: '#085041' }
@@ -557,7 +575,20 @@ function BookingForm({ type, clientId, fileNumber, travelers, onSave, onCancel }
   const adults = travelers.filter((t: any) => t.type !== 'child')
   const children = travelers.filter((t: any) => t.type === 'child')
 
-  const [f, setF] = useState<any>({
+  const [f, setF] = useState<any>(existing?.details ? {
+    // Start from existing details, but ensure top-level edits are reflected
+    ...existing.details,
+    service_name: existing.service_name ?? existing.details.service_name ?? '',
+    check_in: existing.check_in ?? existing.details.check_in ?? '',
+    check_out: existing.check_out ?? existing.details.check_out ?? '',
+    pickup_date: existing.pickup_date ?? existing.details.pickup_date ?? '',
+    return_date: existing.return_date ?? existing.details.return_date ?? '',
+    num_travelers: existing.num_travelers ?? existing.details.num_travelers ?? travelers.length,
+    total_price: existing.total_price != null ? String(existing.total_price) : (existing.details.total_price ?? ''),
+    deposit_paid: existing.deposit_paid != null ? String(existing.deposit_paid) : (existing.details.deposit_paid ?? '0'),
+    supplier_confirmation: existing.supplier_confirmation ?? existing.details.supplier_confirmation ?? '',
+    notes: existing.notes ?? existing.details.notes ?? '',
+  } : {
     service_name:'', check_in:'', check_out:'', pickup_date:'', return_date:'',
     num_travelers: travelers.length, total_price:'', deposit_paid:'0',
     supplier_confirmation:'', notes:'',
@@ -935,9 +966,9 @@ function BookingForm({ type, clientId, fileNumber, travelers, onSave, onCancel }
           total_price: parseFloat(f.total_price)||0,
           deposit_paid: parseFloat(f.deposit_paid)||0,
           supplier_confirmation: f.supplier_confirmation||null,
-          notes: f.notes||null, status: 'inquiry', details: f
+          notes: f.notes||null, status: existing?.status || 'inquiry', details: f
         })} style={{ padding: '7px 18px', background: '#1a2a3a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-          Save Booking
+          {existing ? 'Save Changes' : 'Save Booking'}
         </button>
         <button onClick={onCancel} style={{ padding: '7px 14px', background: '#fff', border: '0.5px solid #d0d0d0', borderRadius: 8, cursor: 'pointer', fontSize: 12 }}>Cancel</button>
       </div>
