@@ -76,16 +76,25 @@ export default function InvoiceModal({ invoice, client, onClose }: { invoice: In
               <thead>
                 <tr>
                   <th style={s.th}>Description</th>
-                  <th style={s.thR}>Amount</th>
+                  <th style={{ ...s.thR, width: 50 }}>Qty</th>
+                  <th style={{ ...s.thR, width: 90 }}>Unit Price</th>
+                  <th style={{ ...s.thR, width: 90 }}>Total</th>
                 </tr>
               </thead>
               <tbody>
-                {invoice.lines.map((l, i) => (
-                  <tr key={i}>
-                    <td style={s.td}>{l.description}</td>
-                    <td style={s.tdR}>{formatMoney(l.amount, cur)}</td>
-                  </tr>
-                ))}
+                {invoice.lines.map((l, i) => {
+                  const qty = (l as any).qty
+                  const unit = (l as any).unit_price
+                  const hasDetail = qty != null && unit != null
+                  return (
+                    <tr key={i}>
+                      <td style={s.td}>{l.description}</td>
+                      <td style={{ ...s.tdR, fontWeight: 400 }}>{hasDetail ? qty : ''}</td>
+                      <td style={{ ...s.tdR, fontWeight: 400 }}>{hasDetail ? formatMoney(unit, cur) : ''}</td>
+                      <td style={s.tdR}>{formatMoney(l.amount, cur)}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
 

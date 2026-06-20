@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { FileText, Plus, Trash2, Check, Printer } from 'lucide-react'
+import { FileText, Plus, Trash2, Printer, X } from 'lucide-react'
 import {
   Invoice, InvoiceLine, listInvoices, createInvoice, deleteInvoice, computeTotals,
 } from '../lib/invoices'
@@ -7,6 +7,16 @@ import { loadSettings } from '../lib/companySettings'
 import { formatMoney } from '../lib/currency'
 import { useAuth } from '../lib/auth'
 import InvoiceModal from './InvoiceModal'
+
+interface DraftLine {
+  id: string
+  description: string
+  qty: number
+  unit_price: number
+}
+
+let lineCounter = 0
+const newLineId = () => `line_${Date.now()}_${lineCounter++}`
 
 export default function InvoicePanel({ clientId, client, bookings }: { clientId: string; client: any; bookings: any[] }) {
   const { profile } = useAuth()
@@ -17,10 +27,11 @@ export default function InvoicePanel({ clientId, client, bookings }: { clientId:
   const [creating, setCreating] = useState(false)
 
   // builder state
-  const [selected, setSelected] = useState<Record<string, boolean>>({})
+  const [draftLines, setDraftLines] = useState<DraftLine[]>([])
   const [currency, setCurrency] = useState('USD')
   const [vatOn, setVatOn] = useState(false)
   const [vatPercent, setVatPercent] = useState(18)
+  const [notes, setNotes] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
 
@@ -37,20 +48,58 @@ export default function InvoicePanel({ clientId, client, bookings }: { clientId:
     })
   }, [clientId])
 
-  const selectedBookings = bookings.filter(b => selected[b.id])
-  const lines: InvoiceLine[] = selectedBookings.map(b => ({
-    description: b.service_name || b.type,
-    amount: Number(b.total_price) || 0,
+  function openBuilder() {
+    setCreating(true)
+    setMsg('')
+    setDraftLines([])
+    setNotes('')
+  }
+
+  // Pull a booking in as a line: qty = number of travelers, unit price = total / qty
+  function addBookingLine(b: any) {
+    const qty = Number(b.num_travelers) > 0 ? Number(b.num_travelers) : 1
+    const total = Number(b.total_price) || 0
+    const unit = qty > 0 ? Math.round((total / qty) * 100) / 100 : total
+    setDraftLines(ls => [...ls, {
+      id: newLineId(),
+      description: b.service_name || b.type || 'Service',
+      qty,
+      unit_price: unit,
+    }])
+  }
+
+  function addBlankLine() {
+    setDraftLines(ls => [...ls, { id: newLineId(), description: '', qty: 1, unit_price: 0 }])
+  }
+
+  function updateLine(id: string, field: keyof DraftLine, value: string) {
+    setDraftLines(ls => ls.map(l => {
+      if (l.id !== id) return l
+      if (field === 'description') return { ...l, description: value }
+      const num = value === '' ? 0 : Number(value)
+      return { ...l, [field]: isNaN(num) ? 0 : num }
+    }))
+  }
+
+  function removeLine(id: string) {
+    setDraftLines(ls => ls.filter(l => l.id !== id))
+  }
+
+  const lines: InvoiceLine[] = draftLines.map(l => ({
+    description: l.description.trim() || 'Item',
+    qty: l.qty,
+    unit_price: l.unit_price,
+    amount: Math.round(l.qty * l.unit_price * 100) / 100,
   }))
   const { subtotal, vat_amount, total } = computeTotals(lines, vatPercent, vatOn)
 
   async function handleCreate() {
-    if (lines.length === 0) { setMsg('Select at least one booking.'); return }
+    if (lines.length === 0) { setMsg('Add at least one line.'); return }
     setBusy(true); setMsg('')
-    const { error } = await createInvoice({ clientId, currency, lines, vatOn })
+    const { error } = await createInvoice({ clientId, currency, lines, vatOn, notes: notes.trim() || undefined })
     setBusy(false)
     if (error) { setMsg(error); return }
-    setSelected({}); setCreating(false)
+    setDraftLines([]); setNotes(''); setCreating(false)
     refresh()
   }
 
@@ -63,6 +112,7 @@ export default function InvoicePanel({ clientId, client, bookings }: { clientId:
   if (!isAdmin) return null  // invoicing is admin-only for now
 
   const lbl: React.CSSProperties = { fontSize: 10, color: '#888', fontWeight: 500 }
+  const cellInp: React.CSSProperties = { padding: '5px 7px', border: '0.5px solid #d0d0d0', borderRadius: 6, fontSize: 12, outline: 'none', background: '#fff', boxSizing: 'border-box', width: '100%' }
 
   return (
     <div style={{ background: '#fff', borderRadius: 12, border: '0.5px solid #e5e5e5', overflow: 'hidden', marginBottom: 12 }}>
@@ -70,7 +120,7 @@ export default function InvoicePanel({ clientId, client, bookings }: { clientId:
         <span style={{ fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 7 }}>
           <FileText size={15} color="#854F0B" /> Invoices ({invoices.length})
         </span>
-        <button onClick={() => { setCreating(c => !c); setMsg('') }}
+        <button onClick={() => creating ? setCreating(false) : openBuilder()}
           style={{ fontSize: 11, color: '#854F0B', background: creating ? '#fff' : '#FAEEDA', border: '0.5px solid #E0B877', borderRadius: 20, padding: '4px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
           {creating ? 'Cancel' : <><Plus size={12} /> New Invoice</>}
         </button>
@@ -78,20 +128,48 @@ export default function InvoicePanel({ clientId, client, bookings }: { clientId:
 
       {creating && (
         <div style={{ padding: 16, borderBottom: '0.5px solid #f0f0f0', background: '#fafafa' }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 8 }}>Select bookings to include:</div>
-          {bookings.length === 0 ? (
-            <div style={{ fontSize: 12, color: '#aaa', marginBottom: 10 }}>No bookings on this client.</div>
+          {bookings.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 6 }}>Add from bookings:</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {bookings.map(b => (
+                  <button key={b.id} onClick={() => addBookingLine(b)}
+                    style={{ fontSize: 11, padding: '5px 10px', borderRadius: 7, border: '0.5px solid #d0d0d0', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Plus size={11} color="#854F0B" />
+                    {b.service_name || b.type}
+                    <span style={{ color: '#888' }}>{formatMoney(b.total_price, b.currency)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 6 }}>Line items:</div>
+          {draftLines.length === 0 ? (
+            <div style={{ fontSize: 12, color: '#aaa', padding: '10px 0', textAlign: 'center', border: '1px dashed #ddd', borderRadius: 8, marginBottom: 10 }}>
+              Add a booking above, or add a blank line below.
+            </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 12 }}>
-              {bookings.map(b => (
-                <label key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 9px', background: '#fff', borderRadius: 7, border: '0.5px solid #eee', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={!!selected[b.id]} onChange={e => setSelected(s => ({ ...s, [b.id]: e.target.checked }))} />
-                  <span style={{ flex: 1, fontSize: 12 }}>{b.service_name || b.type}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600 }}>{formatMoney(b.total_price, b.currency)}</span>
-                </label>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 52px 84px 84px 26px', gap: 6, padding: '0 2px 4px', fontSize: 9, color: '#999', textTransform: 'uppercase', letterSpacing: '.3px' }}>
+                <span>Description</span><span style={{ textAlign: 'center' }}>Qty</span><span style={{ textAlign: 'right' }}>Unit</span><span style={{ textAlign: 'right' }}>Total</span><span />
+              </div>
+              {draftLines.map(l => (
+                <div key={l.id} style={{ display: 'grid', gridTemplateColumns: '1fr 52px 84px 84px 26px', gap: 6, alignItems: 'center', marginBottom: 5 }}>
+                  <input style={cellInp} value={l.description} placeholder="Description" onChange={e => updateLine(l.id, 'description', e.target.value)} />
+                  <input style={{ ...cellInp, textAlign: 'center' }} type="number" value={l.qty} onChange={e => updateLine(l.id, 'qty', e.target.value)} />
+                  <input style={{ ...cellInp, textAlign: 'right' }} type="number" value={l.unit_price} onChange={e => updateLine(l.id, 'unit_price', e.target.value)} />
+                  <div style={{ textAlign: 'right', fontSize: 12, fontWeight: 600, color: '#1a2a3a' }}>{formatMoney(l.qty * l.unit_price, currency)}</div>
+                  <button onClick={() => removeLine(l.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ccc', display: 'flex', padding: 2 }}><X size={14} /></button>
+                </div>
               ))}
             </div>
           )}
+
+          <button onClick={addBlankLine}
+            style={{ fontSize: 11, color: '#185FA5', background: '#fff', border: '0.5px dashed #9bbde0', borderRadius: 7, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 14 }}>
+            <Plus size={12} /> Add blank line
+          </button>
 
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
             <div>
@@ -106,7 +184,11 @@ export default function InvoicePanel({ clientId, client, bookings }: { clientId:
             </label>
           </div>
 
-          {/* Totals preview */}
+          <div style={{ marginBottom: 12 }}>
+            <label style={lbl}>Notes (optional)</label>
+            <input style={{ ...cellInp, marginTop: 3 }} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Payment terms, reference, etc." />
+          </div>
+
           <div style={{ background: '#fff', border: '0.5px solid #eee', borderRadius: 8, padding: '10px 12px', marginBottom: 12 }}>
             <Row label="Subtotal" value={formatMoney(subtotal, currency)} />
             {vatOn && <Row label={`VAT (${vatPercent}%)`} value={formatMoney(vat_amount, currency)} />}

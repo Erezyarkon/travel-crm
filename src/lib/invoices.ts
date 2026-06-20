@@ -3,7 +3,9 @@ import { reserveInvoiceNumber, loadSettings } from './companySettings'
 
 export interface InvoiceLine {
   description: string
-  amount: number
+  qty: number
+  unit_price: number
+  amount: number   // qty * unit_price (stored for convenience/back-compat)
 }
 
 export interface Invoice {
