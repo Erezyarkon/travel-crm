@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Download } from 'lucide-react'
+import { Plus, Search, Download, Users } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import EmptyState from '../components/EmptyState'
 import { exportToCsv } from '../lib/exportCsv'
 import { SkeletonRows } from '../components/Skeleton'
 
@@ -86,10 +87,7 @@ export default function Clients() {
         {loading ? (
           <SkeletonRows rows={7} />
         ) : filtered.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>
-            <div style={{ fontSize: 15, marginBottom: 8 }}>No clients found</div>
-            <button onClick={() => navigate('/clients/new')} style={{ color: '#185FA5', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}>Add first client</button>
-          </div>
+          <EmptyState icon={Users} title={search ? 'No clients match your search' : 'No clients yet'} hint={search ? 'Try a different name, phone or email.' : 'Create your first client file to get started.'} action={search ? undefined : { label: '+ New Client File', onClick: () => navigate('/clients/new') }} />
         ) : filtered.map((c) => (
           <div key={c.id} onClick={() => navigate(`/clients/${c.id}`)} style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', borderBottom: '0.5px solid #f8f8f8' }}
             onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}

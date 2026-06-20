@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { CheckSquare, Square, Plus, Trash2, CalendarClock } from 'lucide-react'
+import EmptyState from './EmptyState'
 import { Task, listTasks, createTask, toggleTask, deleteTask } from '../lib/tasks'
 import { useAuth } from '../lib/auth'
 
@@ -46,6 +47,7 @@ export default function TasksPanel({ clientId }: { clientId: string }) {
   }
 
   async function handleDelete(t: Task) {
+    if (!window.confirm(`Delete task "${t.title}"?`)) return
     await deleteTask(t.id)
     refresh()
   }
@@ -83,7 +85,7 @@ export default function TasksPanel({ clientId }: { clientId: string }) {
       {loading ? (
         <div style={{ padding: 12, textAlign: 'center', color: '#aaa', fontSize: 12 }}>Loading…</div>
       ) : tasks.length === 0 ? (
-        <div style={{ padding: 12, textAlign: 'center', color: '#bbb', fontSize: 12 }}>No tasks yet.</div>
+        <EmptyState icon={CalendarClock} title="No tasks yet" hint="Add a reminder to follow up with this client." compact />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
           {tasks.map(t => {

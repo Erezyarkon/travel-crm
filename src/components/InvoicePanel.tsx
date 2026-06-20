@@ -8,6 +8,7 @@ import { formatMoney } from '../lib/currency'
 import { useAuth } from '../lib/auth'
 import { useToast } from '../lib/toast'
 import InvoiceModal from './InvoiceModal'
+import EmptyState from './EmptyState'
 
 interface DraftLine {
   id: string
@@ -212,7 +213,7 @@ export default function InvoicePanel({ clientId, client, bookings }: { clientId:
       {loading ? (
         <div style={{ padding: 16, textAlign: 'center', color: '#aaa', fontSize: 12 }}>Loading…</div>
       ) : invoices.length === 0 ? (
-        <div style={{ padding: 16, textAlign: 'center', color: '#bbb', fontSize: 12 }}>No invoices yet.</div>
+        <EmptyState icon={FileText} title="No invoices yet" hint="Create an invoice from this client's bookings." compact />
       ) : (
         <div style={{ padding: '8px 0' }}>
           {invoices.map(inv => (

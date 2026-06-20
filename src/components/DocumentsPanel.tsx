@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { FileText, Upload, Download, Trash2, File } from 'lucide-react'
+import EmptyState from './EmptyState'
 import {
   ClientDocument, DOC_CATEGORIES, listDocuments, uploadDocument,
   getDownloadUrl, deleteDocument, formatBytes,
@@ -102,7 +103,7 @@ export default function DocumentsPanel({ clientId, onUploaded }: { clientId: str
       {loading ? (
         <div style={{ padding: 14, textAlign: 'center', color: '#aaa', fontSize: 12 }}>Loading…</div>
       ) : docs.length === 0 ? (
-        <div style={{ padding: 14, textAlign: 'center', color: '#bbb', fontSize: 12 }}>No documents uploaded yet.</div>
+        <EmptyState icon={FileText} title="No documents yet" hint="Upload a passport, contract or ticket above." compact />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {docs.map(doc => {

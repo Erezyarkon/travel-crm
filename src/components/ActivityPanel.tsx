@@ -3,6 +3,7 @@ import {
   History, MessageSquarePlus, Phone, StickyNote, FilePlus, UserPlus,
   RefreshCw, CircleDot, Pencil,
 } from 'lucide-react'
+import EmptyState from './EmptyState'
 import { Activity, listActivities, logActivity } from '../lib/activity'
 import { useAuth } from '../lib/auth'
 
@@ -98,7 +99,7 @@ export default function ActivityPanel({ clientId, refreshKey }: { clientId: stri
       {loading ? (
         <div style={{ padding: 24, textAlign: 'center', color: '#aaa', fontSize: 13 }}>Loading…</div>
       ) : items.length === 0 ? (
-        <div style={{ padding: 24, textAlign: 'center', color: '#bbb', fontSize: 13 }}>No activity yet.</div>
+        <EmptyState icon={History} title="No activity yet" hint="Changes and notes will appear here." compact />
       ) : (
         <div style={{ padding: '8px 0' }}>
           {items.map((a, idx) => {

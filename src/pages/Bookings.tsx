@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Search, BedDouble, Car, Bus, Map, Ticket, UtensilsCrossed, Plane, Shield, Download,
+  Search, BedDouble, Car, Bus, Map, Ticket, UtensilsCrossed, Plane, Shield, Download, CalendarDays,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { SkeletonRows } from '../components/Skeleton'
+import EmptyState from '../components/EmptyState'
 import { exportToCsv } from '../lib/exportCsv'
 
 const BOOKING_TYPES: Record<string, { label: string; icon: any; color: string; bg: string }> = {
@@ -152,10 +153,7 @@ export default function Bookings() {
         {loading ? (
           <SkeletonRows rows={7} />
         ) : filtered.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>
-            <div style={{ fontSize: 15 }}>No bookings found</div>
-            <div style={{ fontSize: 12, marginTop: 4 }}>Bookings are created from inside a client file.</div>
-          </div>
+          <EmptyState icon={CalendarDays} title="No bookings found" hint="Bookings are created from inside a client file. Open a client to add their first booking." compact />
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
