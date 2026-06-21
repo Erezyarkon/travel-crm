@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Download, Users } from 'lucide-react'
+import { Plus, Search, Download, Users, LayoutGrid, List as ListIcon } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import EmptyState from '../components/EmptyState'
@@ -16,6 +16,7 @@ export default function Clients() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortKey, setSortKey] = useState('created')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [view, setView] = useState<'list' | 'grid'>('list')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -108,12 +109,46 @@ export default function Clients() {
             <option value="file:desc">File # ↓</option>
             <option value="status:asc">Status</option>
           </select>
+          <div style={{ display: 'flex', border: '0.5px solid #e0e0e0', borderRadius: 8, overflow: 'hidden' }}>
+            <button onClick={() => setView('list')} title="List view"
+              style={{ padding: '7px 9px', border: 'none', background: view === 'list' ? '#1a2a3a' : '#fff', color: view === 'list' ? '#fff' : '#888', cursor: 'pointer', display: 'flex' }}>
+              <ListIcon size={15} />
+            </button>
+            <button onClick={() => setView('grid')} title="Card view"
+              style={{ padding: '7px 9px', border: 'none', background: view === 'grid' ? '#1a2a3a' : '#fff', color: view === 'grid' ? '#fff' : '#888', cursor: 'pointer', display: 'flex', borderLeft: '0.5px solid #e0e0e0' }}>
+              <LayoutGrid size={15} />
+            </button>
+          </div>
         </div>
 
         {loading ? (
           <SkeletonRows rows={7} />
         ) : filtered.length === 0 ? (
           <EmptyState icon={Users} title={search ? 'No clients match your search' : 'No clients yet'} hint={search ? 'Try a different name, phone or email.' : 'Create your first client file to get started.'} action={search ? undefined : { label: '+ New Client File', onClick: () => navigate('/clients/new') }} />
+        ) : view === 'grid' ? (
+          <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+            {filtered.map((c) => (
+              <div key={c.id} onClick={() => navigate(`/clients/${c.id}`)}
+                style={{ border: '0.5px solid #eee', borderRadius: 12, padding: 16, cursor: 'pointer', background: '#fff', transition: 'box-shadow 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)')}
+                onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 12 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#E6F1FB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600, color: '#185FA5', flexShrink: 0 }}>
+                    {c.full_name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
+                    <div style={{ fontSize: 11, color: '#aaa' }}>{c.file_number}</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 11.5, color: '#888', lineHeight: 1.6, marginBottom: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {c.phone && <div>{c.phone}</div>}
+                  {c.email && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.email}</div>}
+                </div>
+                <StatusBadge status={c.status} kind="client" />
+              </div>
+            ))}
+          </div>
         ) : filtered.map((c) => (
           <div key={c.id} onClick={() => navigate(`/clients/${c.id}`)} style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', borderBottom: '0.5px solid #f8f8f8' }}
             onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
