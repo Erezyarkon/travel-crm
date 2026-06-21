@@ -47,6 +47,8 @@ export default function Bookings() {
   const navigate = useNavigate()
   const [bookings, setBookings] = useState<any[]>([])
   const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState<string>('date')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   const [loading, setLoading] = useState(true)
@@ -76,7 +78,7 @@ export default function Bookings() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
-    return bookings.filter(b => {
+    const rows = bookings.filter(b => {
       if (statusFilter !== 'all' && b.status !== statusFilter) return false
       if (typeFilter !== 'all' && b.type !== typeFilter) return false
       if (!q) return true
@@ -88,7 +90,32 @@ export default function Bookings() {
         (BOOKING_TYPES[b.type]?.label || '').toLowerCase().includes(q)
       )
     })
-  }, [bookings, search, statusFilter, typeFilter])
+
+    const dir = sortDir === 'asc' ? 1 : -1
+    const val = (b: any) => {
+      switch (sortKey) {
+        case 'type': return BOOKING_TYPES[b.type]?.label || b.type
+        case 'service': return (b.service_name || '').toLowerCase()
+        case 'client': return (b.clients?.full_name || '').toLowerCase()
+        case 'file': return b.file_number || ''
+        case 'date': return bookingDate(b) || ''
+        case 'price': return Number(b.total_price) || 0
+        case 'status': return b.status || ''
+        default: return ''
+      }
+    }
+    return [...rows].sort((a, b) => {
+      const va = val(a), vb = val(b)
+      if (va < vb) return -1 * dir
+      if (va > vb) return 1 * dir
+      return 0
+    })
+  }, [bookings, search, statusFilter, typeFilter, sortKey, sortDir])
+
+  function toggleSort(key: string) {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortKey(key); setSortDir(key === 'date' || key === 'price' ? 'desc' : 'asc') }
+  }
 
   const totalValue = filtered
     .filter(b => b.status !== 'cancelled')
@@ -159,13 +186,13 @@ export default function Bookings() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '0.5px solid #f0f0f0' }}>
-                  <th style={th}>Type</th>
-                  <th style={th}>Service</th>
-                  <th style={th}>Client</th>
-                  <th style={th}>File #</th>
-                  <th style={th}>Date</th>
-                  <th style={{ ...th, textAlign: 'right' }}>Price</th>
-                  <th style={{ ...th, textAlign: 'center' }}>Status</th>
+                  <Th label="Type" k="type" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <Th label="Service" k="service" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <Th label="Client" k="client" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <Th label="File #" k="file" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <Th label="Date" k="date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <Th label="Price" k="price" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
+                  <Th label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="center" />
                 </tr>
               </thead>
               <tbody>
@@ -210,5 +237,18 @@ export default function Bookings() {
         )}
       </div>
     </div>
+  )
+}
+
+function Th({ label, k, sortKey, sortDir, onSort, align }: { label: string; k: string; sortKey: string; sortDir: 'asc' | 'desc'; onSort: (k: string) => void; align?: 'left' | 'right' | 'center' }) {
+  const active = sortKey === k
+  return (
+    <th
+      onClick={() => onSort(k)}
+      style={{ textAlign: align || 'left', padding: '10px 16px', fontSize: 11, fontWeight: 600, color: active ? '#1a2a3a' : '#999', textTransform: 'uppercase', letterSpacing: 0.3, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+    >
+      {label}
+      <span style={{ marginLeft: 4, opacity: active ? 1 : 0.25, fontSize: 9 }}>{active ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
+    </th>
   )
 }

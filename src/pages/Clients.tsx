@@ -13,6 +13,8 @@ export default function Clients() {
   const [clients, setClients] = useState<any[]>([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [sortKey, setSortKey] = useState('created')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -35,7 +37,20 @@ export default function Clients() {
     c.file_number?.toLowerCase().includes(search.toLowerCase()) ||
     c.phone?.includes(search) ||
     c.email?.toLowerCase().includes(search.toLowerCase())
-  )
+  ).sort((a, b) => {
+    const dir = sortDir === 'asc' ? 1 : -1
+    let va: any, vb: any
+    switch (sortKey) {
+      case 'name': va = (a.full_name || '').toLowerCase(); vb = (b.full_name || '').toLowerCase(); break
+      case 'file': va = a.file_number || ''; vb = b.file_number || ''; break
+      case 'status': va = a.status || ''; vb = b.status || ''; break
+      case 'created': va = a.created_at || ''; vb = b.created_at || ''; break
+      default: va = ''; vb = ''
+    }
+    if (va < vb) return -1 * dir
+    if (va > vb) return 1 * dir
+    return 0
+  })
 
   const statusInfo: Record<string, { label: string; bg: string; color: string }> = {
     lead:   { label: 'Lead',   bg: '#E1F5EE', color: '#0F6E56' },
@@ -82,6 +97,20 @@ export default function Clients() {
               </button>
             ))}
           </div>
+          <select
+            value={`${sortKey}:${sortDir}`}
+            onChange={e => { const [k, d] = e.target.value.split(':'); setSortKey(k); setSortDir(d as 'asc' | 'desc') }}
+            style={{ padding: '7px 10px', border: '0.5px solid #e0e0e0', borderRadius: 8, fontSize: 12, outline: 'none', background: '#fff', cursor: 'pointer', color: '#555' }}
+            title="Sort"
+          >
+            <option value="created:desc">Newest first</option>
+            <option value="created:asc">Oldest first</option>
+            <option value="name:asc">Name A–Z</option>
+            <option value="name:desc">Name Z–A</option>
+            <option value="file:asc">File # ↑</option>
+            <option value="file:desc">File # ↓</option>
+            <option value="status:asc">Status</option>
+          </select>
         </div>
 
         {loading ? (
