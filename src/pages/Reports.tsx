@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Legend,
+  PieChart, Pie, Cell, LineChart, Line, Legend, ComposedChart,
 } from 'recharts'
 import {
-  DollarSign, CalendarDays, TrendingUp, Receipt,
+  DollarSign, CalendarDays, TrendingUp, Receipt, TrendingDown, Percent, Clock,
   BedDouble, Car, Bus, Map, Ticket, UtensilsCrossed, Plane, Shield,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -62,7 +62,7 @@ export default function Reports() {
     async function load() {
       setLoading(true)
       const [{ data: b }, { data: c }] = await Promise.all([
-        supabase.from('bookings').select('total_price, status, type, created_at'),
+        supabase.from('bookings').select('total_price, cost_price, status, type, created_at'),
         supabase.from('clients').select('status, created_at'),
       ])
       setBookings(b || [])
@@ -112,9 +112,17 @@ export default function Reports() {
   // ---- KPI cards ----
   const revenueBookings = bookingsInRange.filter(b => REVENUE_STATUSES.includes(b.status))
   const totalRevenue = revenueBookings.reduce((s, b) => s + (Number(b.total_price) || 0), 0)
+  const totalCost = revenueBookings.reduce((s, b) => s + (Number(b.cost_price) || 0), 0)
+  const totalProfit = totalRevenue - totalCost
+  const profitMargin = totalRevenue ? (totalProfit / totalRevenue) * 100 : 0
   const totalBookings = bookingsInRange.filter(b => b.status !== 'cancelled').length
   const newLeads = clientsInRange.length
   const avgBookingValue = revenueBookings.length ? totalRevenue / revenueBookings.length : 0
+
+  // Open debt: confirmed/active bookings not yet fully paid (price set, not in paid statuses)
+  const openDebt = bookingsInRange
+    .filter(b => ['confirmed', 'quoted'].includes(b.status))
+    .reduce((s, b) => s + (Number(b.total_price) || 0), 0)
 
   // ---- Monthly buckets (revenue, bookings, leads) ----
   const monthlyBuckets = useMemo(() => {
@@ -139,10 +147,10 @@ export default function Reports() {
 
     // For custom ranges, anchor the last bucket to customTo (or now)
     const anchor = period.key === 'custom' && customTo ? new Date(customTo + 'T00:00:00') : now
-    const buckets: { key: string; label: string; revenue: number; bookings: number; leads: number }[] = []
+    const buckets: { key: string; label: string; revenue: number; cost: number; profit: number; bookings: number; leads: number }[] = []
     for (let i = numMonths - 1; i >= 0; i--) {
       const d = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1)
-      buckets.push({ key: monthKey(d), label: monthLabel(d), revenue: 0, bookings: 0, leads: 0 })
+      buckets.push({ key: monthKey(d), label: monthLabel(d), revenue: 0, cost: 0, profit: 0, bookings: 0, leads: 0 })
     }
     const byKey: Record<string, typeof buckets[0]> = {}
     buckets.forEach(b => (byKey[b.key] = b))
@@ -152,7 +160,11 @@ export default function Reports() {
       const k = monthKey(new Date(b.created_at))
       if (!byKey[k]) return
       if (b.status !== 'cancelled') byKey[k].bookings += 1
-      if (REVENUE_STATUSES.includes(b.status)) byKey[k].revenue += Number(b.total_price) || 0
+      if (REVENUE_STATUSES.includes(b.status)) {
+        byKey[k].revenue += Number(b.total_price) || 0
+        byKey[k].cost += Number(b.cost_price) || 0
+        byKey[k].profit += (Number(b.total_price) || 0) - (Number(b.cost_price) || 0)
+      }
     })
     clients.forEach(c => {
       if (!c.created_at) return
@@ -228,6 +240,64 @@ export default function Reports() {
             <div style={{ fontSize: 26, fontWeight: 700, color: '#1a1a1a' }}>{value}</div>
           </div>
         ))}
+      </div>
+
+      {/* Financial KPI cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
+        <div style={{ ...card, padding: '16px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <span style={{ fontSize: 12, color: '#888' }}>Cost</span>
+            <div style={{ background: '#FBEAEA', borderRadius: 8, padding: 6 }}><TrendingDown size={16} color="#A32D2D" /></div>
+          </div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: '#1a1a1a' }}>${totalCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+        </div>
+        <div style={{ ...card, padding: '16px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <span style={{ fontSize: 12, color: '#888' }}>Profit</span>
+            <div style={{ background: '#E1F5EE', borderRadius: 8, padding: 6 }}><TrendingUp size={16} color="#0F6E56" /></div>
+          </div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: totalProfit >= 0 ? '#0F6E56' : '#A32D2D' }}>${totalProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+        </div>
+        <div style={{ ...card, padding: '16px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <span style={{ fontSize: 12, color: '#888' }}>Profit Margin</span>
+            <div style={{ background: '#EEEDFE', borderRadius: 8, padding: 6 }}><Percent size={16} color="#534AB7" /></div>
+          </div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: '#1a1a1a' }}>{profitMargin.toFixed(1)}%</div>
+        </div>
+        <div style={{ ...card, padding: '16px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <span style={{ fontSize: 12, color: '#888' }}>Open (Quoted/Confirmed)</span>
+            <div style={{ background: '#FAEEDA', borderRadius: 8, padding: 6 }}><Clock size={16} color="#854F0B" /></div>
+          </div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: '#854F0B' }}>${openDebt.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+        </div>
+      </div>
+
+      {/* Revenue vs Cost + Profit */}
+      <div style={{ ...card, marginBottom: 16, overflow: 'hidden' }}>
+        <div style={sectionHead}>Revenue vs Cost &amp; Profit by Month</div>
+        <div style={{ padding: '12px 16px 4px' }}>
+          {monthlyBuckets.every(b => b.revenue === 0) ? (
+            <div style={{ padding: 24, textAlign: 'center', color: '#aaa', fontSize: 13 }}>No revenue recorded yet. Add cost prices to bookings to see profit.</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <ComposedChart data={monthlyBuckets} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#888' }} axisLine={{ stroke: '#e5e5e5' }} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: '#888' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
+                <Tooltip
+                  formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name]}
+                  contentStyle={{ borderRadius: 8, border: '0.5px solid #e5e5e5', fontSize: 13 }}
+                />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="revenue" name="Revenue" fill="#3B6D11" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                <Bar dataKey="cost" name="Cost" fill="#E0A6A6" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                <Line dataKey="profit" name="Profit" stroke="#534AB7" strokeWidth={2.5} dot={{ r: 3 }} type="monotone" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          )}
+        </div>
       </div>
 
       {/* Revenue trend */}
