@@ -37,6 +37,7 @@ const PERIODS = [
   { key: '6m', label: 'Last 6 Months', months: 6 },
   { key: '12m', label: 'This Year', months: 12 },
   { key: 'all', label: 'All Time', months: 0 },
+  { key: 'custom', label: 'Custom Range…', months: -1 },
 ]
 
 function monthKey(d: Date) {
@@ -51,6 +52,8 @@ const sectionHead: React.CSSProperties = { padding: '14px 16px', borderBottom: '
 
 export default function Reports() {
   const [periodKey, setPeriodKey] = useState('6m')
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo, setCustomTo] = useState('')
   const [bookings, setBookings] = useState<any[]>([])
   const [clients, setClients] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -72,6 +75,7 @@ export default function Reports() {
   const period = PERIODS.find(p => p.key === periodKey) || PERIODS[2]
 
   const rangeStart = useMemo(() => {
+    if (period.key === 'custom') return customFrom ? new Date(customFrom + 'T00:00:00') : null
     if (period.months === 0) return null
     const d = new Date()
     d.setDate(1); d.setHours(0, 0, 0, 0)
@@ -80,17 +84,30 @@ export default function Reports() {
     }
     d.setMonth(d.getMonth() - (period.months - 1))
     return d
-  }, [period])
+  }, [period, customFrom])
+
+  const rangeEnd = useMemo(() => {
+    if (period.key === 'custom' && customTo) return new Date(customTo + 'T23:59:59')
+    return null
+  }, [period, customTo])
+
+  const inRange = (dateStr: string | null) => {
+    if (!dateStr) return false
+    const d = new Date(dateStr)
+    if (rangeStart && d < rangeStart) return false
+    if (rangeEnd && d > rangeEnd) return false
+    return true
+  }
 
   const bookingsInRange = useMemo(() => {
-    if (!rangeStart) return bookings
-    return bookings.filter(b => b.created_at && new Date(b.created_at) >= rangeStart)
-  }, [bookings, rangeStart])
+    if (!rangeStart && !rangeEnd) return bookings
+    return bookings.filter(b => inRange(b.created_at))
+  }, [bookings, rangeStart, rangeEnd])
 
   const clientsInRange = useMemo(() => {
-    if (!rangeStart) return clients
-    return clients.filter(c => c.created_at && new Date(c.created_at) >= rangeStart)
-  }, [clients, rangeStart])
+    if (!rangeStart && !rangeEnd) return clients
+    return clients.filter(c => inRange(c.created_at))
+  }, [clients, rangeStart, rangeEnd])
 
   // ---- KPI cards ----
   const revenueBookings = bookingsInRange.filter(b => REVENUE_STATUSES.includes(b.status))
@@ -102,7 +119,15 @@ export default function Reports() {
   // ---- Monthly buckets (revenue, bookings, leads) ----
   const monthlyBuckets = useMemo(() => {
     const now = new Date()
-    const numMonths = period.months === 0
+    const numMonths = period.key === 'custom'
+      ? (() => {
+          if (!customFrom) return 6
+          const start = new Date(customFrom + 'T00:00:00')
+          const end = customTo ? new Date(customTo + 'T00:00:00') : now
+          const diff = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1
+          return Math.max(1, Math.min(diff, 24))
+        })()
+      : period.months === 0
       ? (() => {
           const allDates = [...bookings.map(b => b.created_at), ...clients.map(c => c.created_at)].filter(Boolean).map(d => new Date(d))
           if (allDates.length === 0) return 6
@@ -112,9 +137,11 @@ export default function Reports() {
         })()
       : period.key === '12m' ? now.getMonth() + 1 : period.months
 
+    // For custom ranges, anchor the last bucket to customTo (or now)
+    const anchor = period.key === 'custom' && customTo ? new Date(customTo + 'T00:00:00') : now
     const buckets: { key: string; label: string; revenue: number; bookings: number; leads: number }[] = []
     for (let i = numMonths - 1; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const d = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1)
       buckets.push({ key: monthKey(d), label: monthLabel(d), revenue: 0, bookings: 0, leads: 0 })
     }
     const byKey: Record<string, typeof buckets[0]> = {}
@@ -133,7 +160,7 @@ export default function Reports() {
       if (byKey[k]) byKey[k].leads += 1
     })
     return buckets
-  }, [bookings, clients, period])
+  }, [bookings, clients, period, customFrom, customTo])
 
   // ---- Bookings by type ----
   const typeBreakdown = useMemo(() => {
@@ -170,13 +197,24 @@ export default function Reports() {
           <h1 style={{ fontSize: 22, fontWeight: 600 }}>Reports</h1>
           <p style={{ color: '#888', fontSize: 13, marginTop: 2 }}>Revenue, bookings and lead performance</p>
         </div>
-        <select
-          value={periodKey}
-          onChange={e => setPeriodKey(e.target.value)}
-          style={{ padding: '8px 12px', border: '0.5px solid #d0d0d0', borderRadius: 8, fontSize: 13, outline: 'none', background: '#fafafa', cursor: 'pointer' }}
-        >
-          {PERIODS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
-        </select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {periodKey === 'custom' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
+                style={{ padding: '7px 9px', border: '0.5px solid #d0d0d0', borderRadius: 8, fontSize: 12, outline: 'none', background: '#fff' }} />
+              <span style={{ color: '#aaa', fontSize: 12 }}>→</span>
+              <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
+                style={{ padding: '7px 9px', border: '0.5px solid #d0d0d0', borderRadius: 8, fontSize: 12, outline: 'none', background: '#fff' }} />
+            </div>
+          )}
+          <select
+            value={periodKey}
+            onChange={e => setPeriodKey(e.target.value)}
+            style={{ padding: '8px 12px', border: '0.5px solid #d0d0d0', borderRadius: 8, fontSize: 13, outline: 'none', background: '#fafafa', cursor: 'pointer' }}
+          >
+            {PERIODS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* KPI cards */}
