@@ -16,6 +16,7 @@ export interface Group {
   notes: string | null
   owner_id: string | null
   created_at: string
+  pricing?: any
 }
 
 // Stages mirror EM's real workflow:

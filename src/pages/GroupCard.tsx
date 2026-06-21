@@ -7,6 +7,7 @@ import {
 } from '../lib/groups'
 import { formatMoney } from '../lib/currency'
 import { useToast } from '../lib/toast'
+import GroupPricingPanel from '../components/GroupPricingPanel'
 
 export default function GroupCard() {
   const { id } = useParams()
@@ -129,6 +130,9 @@ export default function GroupCard() {
           ) : null}
         </div>
       )}
+
+      {/* Pricing calculator */}
+      <GroupPricingPanel group={group} onSaved={(price, single) => setGroup(g => g ? { ...g, price_per_person: price, single_supplement: single } : g)} />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {/* Members */}
