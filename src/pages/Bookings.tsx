@@ -6,6 +6,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { SkeletonRows } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
+import { BOOKING_STATUS as STATUS_INFO, StatusBadge } from '../lib/status'
 import { exportToCsv } from '../lib/exportCsv'
 
 const BOOKING_TYPES: Record<string, { label: string; icon: any; color: string; bg: string }> = {
@@ -17,16 +18,6 @@ const BOOKING_TYPES: Record<string, { label: string; icon: any; color: string; b
   meals:      { label: 'Meals',      icon: UtensilsCrossed, color: '#993556', bg: '#FBEAF0' },
   flight:     { label: 'Flights',    icon: Plane,           color: '#0C447C', bg: '#B5D4F4' },
   vip:        { label: 'VIP',        icon: Shield,          color: '#B8860B', bg: '#FFF8E6' },
-}
-
-const STATUS_INFO: Record<string, { label: string; bg: string; color: string }> = {
-  inquiry:      { label: 'Inquiry',      bg: '#F1F1F1', color: '#5F5E5A' },
-  quoted:       { label: 'Quoted',       bg: '#FAEEDA', color: '#854F0B' },
-  confirmed:    { label: 'Confirmed',    bg: '#E6F1FB', color: '#185FA5' },
-  paid:         { label: 'Paid',         bg: '#EAF3DE', color: '#3B6D11' },
-  voucher_sent: { label: 'Voucher Sent', bg: '#E1F5EE', color: '#0F6E56' },
-  completed:    { label: 'Completed',    bg: '#E1F5EE', color: '#0F6E56' },
-  cancelled:    { label: 'Cancelled',    bg: '#FBEAEA', color: '#A32D2D' },
 }
 
 const STATUS_ORDER = ['all', 'inquiry', 'quoted', 'confirmed', 'paid', 'voucher_sent', 'completed', 'cancelled']
@@ -199,7 +190,6 @@ export default function Bookings() {
                 {filtered.map(b => {
                   const bt = BOOKING_TYPES[b.type] || { label: b.type, icon: Ticket, color: '#888', bg: '#f0f0f0' }
                   const Icon = bt.icon
-                  const st = STATUS_INFO[b.status] || { label: b.status, bg: '#f0f0f0', color: '#888' }
                   return (
                     <tr
                       key={b.id}
@@ -224,9 +214,7 @@ export default function Bookings() {
                         {b.total_price ? `$${Number(b.total_price).toLocaleString()}` : '—'}
                       </td>
                       <td style={{ ...td, textAlign: 'center' }}>
-                        <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: st.bg, color: st.color, fontWeight: 500, whiteSpace: 'nowrap' }}>
-                          {st.label}
-                        </span>
+                        <StatusBadge status={b.status} kind="booking" />
                       </td>
                     </tr>
                   )

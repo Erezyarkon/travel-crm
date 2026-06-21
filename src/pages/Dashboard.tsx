@@ -8,10 +8,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { listOpenTasks } from '../lib/tasks'
 
-const statusLabels: Record<string, string> = {
-  inquiry: 'Inquiry', quoted: 'Quoted', confirmed: 'Confirmed',
-  paid: 'Paid', voucher_sent: 'Voucher Sent', completed: 'Completed', cancelled: 'Cancelled',
-}
+import { BOOKING_STATUS_LABELS as statusLabels } from '../lib/status'
 
 function daysUntil(dateStr: string): number {
   const today = new Date(); today.setHours(0, 0, 0, 0)

@@ -4,6 +4,7 @@ import { Plus, Search, Download, Users } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import EmptyState from '../components/EmptyState'
+import { CLIENT_STATUS as statusInfoShared, StatusBadge } from '../lib/status'
 import { exportToCsv } from '../lib/exportCsv'
 import { SkeletonRows } from '../components/Skeleton'
 
@@ -52,11 +53,7 @@ export default function Clients() {
     return 0
   })
 
-  const statusInfo: Record<string, { label: string; bg: string; color: string }> = {
-    lead:   { label: 'Lead',   bg: '#E1F5EE', color: '#0F6E56' },
-    active: { label: 'Active', bg: '#E6F1FB', color: '#185FA5' },
-    past:   { label: 'Past',   bg: '#F1EFE8', color: '#5F5E5A' },
-  }
+  const statusInfo = statusInfoShared
 
   return (
     <div style={{ padding: 24 }}>
@@ -129,8 +126,8 @@ export default function Clients() {
               <div style={{ fontSize: 11, color: '#888', marginTop: 1 }}>{c.phone} · {c.email}</div>
             </div>
             <div style={{ fontSize: 12, color: '#aaa', minWidth: 80, textAlign: 'center' }}>{c.file_number}</div>
-            <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: statusInfo[c.status]?.bg, color: statusInfo[c.status]?.color, fontWeight: 500, minWidth: 50, textAlign: 'center' }}>
-              {statusInfo[c.status]?.label}
+            <span style={{ minWidth: 50, textAlign: 'center' }}>
+              <StatusBadge status={c.status} kind="client" />
             </span>
           </div>
         ))}
