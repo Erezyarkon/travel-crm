@@ -8,6 +8,8 @@ import NewClient from './pages/NewClient'
 import Bookings from './pages/Bookings'
 import Calendar from './pages/Calendar'
 import Suppliers from './pages/Suppliers'
+import Groups from './pages/Groups'
+import GroupCard from './pages/GroupCard'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
@@ -37,6 +39,8 @@ function AppRoutes() {
         <Route path="bookings" element={<Bookings />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="suppliers" element={<Suppliers />} />
+        <Route path="groups" element={<Groups />} />
+        <Route path="groups/:id" element={<GroupCard />} />
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<Settings />} />
       </Route>

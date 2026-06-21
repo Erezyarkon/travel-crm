@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth, Profile } from '../lib/auth'
 import { useToast } from '../lib/toast'
 import { listProfiles } from '../lib/team'
+import { Group, listGroups } from '../lib/groups'
 import DocumentsPanel from '../components/DocumentsPanel'
 import ActivityPanel from '../components/ActivityPanel'
 import TasksPanel from '../components/TasksPanel'
@@ -59,6 +60,7 @@ export default function ClientCard() {
   const { profile, user } = useAuth()
   const toast = useToast()
   const [agents, setAgents] = useState<Profile[]>([])
+  const [groups, setGroups] = useState<Group[]>([])
   const [showEditClient, setShowEditClient] = useState(false)
   const [showAddTraveler, setShowAddTraveler] = useState(false)
   const [activityKey, setActivityKey] = useState(0)
@@ -93,10 +95,21 @@ export default function ClientCard() {
     }
   }, [profile])
 
+  // Load groups for the group selector
+  useEffect(() => {
+    listGroups().then(setGroups)
+  }, [])
+
   async function reassignOwner(newOwnerId: string) {
     const value = newOwnerId || null
     await supabase.from('clients').update({ owner_id: value }).eq('id', id)
     setClient((c: any) => ({ ...c, owner_id: value }))
+  }
+
+  async function linkGroup(groupId: string | null) {
+    await supabase.from('clients').update({ group_id: groupId }).eq('id', id)
+    setClient((c: any) => ({ ...c, group_id: groupId }))
+    toast.success(groupId ? 'Linked to group' : 'Removed from group')
   }
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>Loading...</div>
@@ -166,6 +179,26 @@ export default function ClientCard() {
                     </select>
                   </div>
                 )}
+
+                {/* GROUP LINK */}
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontSize: 9, color: '#aaa', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>Group</div>
+                  <select
+                    value={client.group_id || ''}
+                    onChange={e => linkGroup(e.target.value || null)}
+                    style={{ width: '100%', fontSize: 12, padding: '5px 8px', borderRadius: 6, border: '0.5px solid #d0d0d0', background: '#fafafa', cursor: 'pointer', outline: 'none' }}
+                  >
+                    <option value="">No group</option>
+                    {groups.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                  {client.group_id && (
+                    <button onClick={() => navigate(`/groups/${client.group_id}`)} style={{ marginTop: 5, fontSize: 11, color: '#534AB7', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                      Open group →
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
