@@ -279,6 +279,18 @@ export default function ClientCard() {
                 <BookingRow key={b.id} booking={b}
                   onVoucher={() => setVoucherBooking(b)}
                   onEdit={() => setEditingBooking(b)}
+                  onDuplicate={async () => {
+                    const { id: _id, created_at: _ca, ...rest } = b
+                    const copy = { ...rest, status: 'inquiry', service_name: `${b.service_name || b.type} (copy)`, deposit_paid: 0, supplier_id: null, cost_price: null }
+                    const { data, error } = await supabase.from('bookings').insert(copy).select().single()
+                    if (error) { toast.error('Could not duplicate booking'); return }
+                    if (data) {
+                      setBookings(bks => [data, ...bks])
+                      await logActivity(id!, 'booking', `Booking duplicated: ${data.service_name || data.type}`, user?.id || null, profile?.full_name || null)
+                      bumpActivity()
+                      toast.success('Booking duplicated')
+                    }
+                  }}
                   onFinanceChange={() => reloadData()}
                   onStatusChange={async (newStatus: string) => {
                     await supabase.from('bookings').update({ status: newStatus }).eq('id', b.id)
@@ -507,7 +519,7 @@ function VoucherModal({ booking: b, client, travelers, onClose }: any) {
 }
 
 /* ─── BOOKING ROW ─────────────────────────────────────────────────────────── */
-function BookingRow({ booking: b, onStatusChange, onVoucher, onFinanceChange, onEdit }: { booking: any; onStatusChange: (s: string) => void; onVoucher: () => void; onFinanceChange?: () => void; onEdit?: () => void }) {
+function BookingRow({ booking: b, onStatusChange, onVoucher, onFinanceChange, onEdit, onDuplicate }: { booking: any; onStatusChange: (s: string) => void; onVoucher: () => void; onFinanceChange?: () => void; onEdit?: () => void; onDuplicate?: () => void }) {
   const [showFinance, setShowFinance] = useState(false)
   const stepIdx = STATUS_STEPS.indexOf(b.status)
   const bc = BOOKING_TYPES.find(bt => bt.key === b.type)
@@ -555,6 +567,7 @@ function BookingRow({ booking: b, onStatusChange, onVoucher, onFinanceChange, on
         {!['completed','cancelled'].includes(b.status) && <Abtn label="Cancel" color="#A32D2D" bg="#FCEBEB" onClick={() => onStatusChange('cancelled')} />}
         <Abtn label="📄 View / Print" color="#1a2a3a" bg="#f0f4f8" onClick={onVoucher} />
         <Abtn label="✏️ Edit" color="#854F0B" bg="#FAEEDA" onClick={() => onEdit?.()} />
+        <Abtn label="⧉ Duplicate" color="#534AB7" bg="#EEEDFE" onClick={() => onDuplicate?.()} />
         <Abtn label={showFinance ? '💰 Hide Financials' : '💰 Financials'} color="#0F6E56" bg="#E1F5EE" onClick={() => setShowFinance(s => !s)} />
       </div>
       {showFinance && (
