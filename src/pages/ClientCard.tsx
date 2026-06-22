@@ -368,7 +368,7 @@ function VoucherModal({ booking: b, client, travelers, onClose }: any) {
   const fmt = (d: string) => d ? new Date(d).toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' }) : ''
 
   const s = {
-    overlay: { position:'fixed' as const, inset:0, background:'rgba(0,0,0,.7)', zIndex:1000, overflow:'auto', padding:20 },
+    overlay: { position:'fixed' as const, inset:0, background:'rgba(0,0,0,.7)', zIndex:1000, overflow:'auto', padding:20, direction:'ltr' as const, textAlign:'left' as const },
     page: { background:'#fff', width:'100%', maxWidth:794, margin:'0 auto', fontFamily:'-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif', fontSize:11, color:'#1a1a1a', boxShadow:'0 4px 24px rgba(0,0,0,.2)' },
     hdr: { background:'#1a2a3a', padding:'12px 20px', display:'flex' as const, alignItems:'center' as const, justifyContent:'space-between' as const },
     clientStrip: { background:'#f0f4f8', borderBottom:'0.5px solid #dde3ea', padding:'7px 20px', display:'flex' as const, alignItems:'center' as const, gap:16 },
@@ -541,6 +541,7 @@ function VoucherModal({ booking: b, client, travelers, onClose }: any) {
             background: #fff !important;
             padding: 0 !important;
             overflow: visible !important;
+            direction: ltr !important; text-align: left !important;
           }
           /* Hide the action buttons when printing */
           .no-print { display: none !important; }

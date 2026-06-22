@@ -55,7 +55,7 @@ export default function GroupQuoteModal({ group, onClose }: { group: any; onClos
   const programme = model ? buildHotelProgramme(model) : []
 
   const s = {
-    overlay: { position: 'fixed' as const, inset: 0, background: 'rgba(0,0,0,.7)', zIndex: 1000, overflow: 'auto', padding: 20 },
+    overlay: { position: 'fixed' as const, inset: 0, background: 'rgba(0,0,0,.7)', zIndex: 1000, overflow: 'auto', padding: 20, direction: 'ltr' as const, textAlign: 'left' as const },
     page: { background: '#fff', width: '100%', maxWidth: 794, margin: '0 auto', fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif', fontSize: 11.5, color: '#1a1a1a', boxShadow: '0 4px 24px rgba(0,0,0,.2)' },
     hdr: { background: '#1a2a3a', padding: '16px 24px', display: 'flex' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const },
     body: { padding: '20px 24px' },
@@ -202,6 +202,7 @@ export default function GroupQuoteModal({ group, onClose }: { group: any; onClos
             left: 0 !important; top: 0 !important;
             width: 100% !important; background: #fff !important;
             padding: 0 !important; overflow: visible !important;
+            direction: ltr !important; text-align: left !important;
           }
           .no-print { display: none !important; }
           @page { margin: 12mm; }
