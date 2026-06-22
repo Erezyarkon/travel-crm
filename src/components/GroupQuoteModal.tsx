@@ -121,7 +121,7 @@ export default function GroupQuoteModal({ group, onClose }: { group: any; onClos
                 <tbody>
                   {totals.tierResults.map((t, i) => (
                     <tr key={i}>
-                      <td style={s.td}>{t.pax} Passengers</td>
+                      <td style={s.td}>{t.pax}–{t.paxHigh} Passengers</td>
                       <td style={s.tdR}>{formatMoney(Math.round(t.totalPrice), cur)}</td>
                     </tr>
                   ))}
@@ -138,6 +138,9 @@ export default function GroupQuoteModal({ group, onClose }: { group: any; onClos
                 {group.price_per_person ? `From ${formatMoney(group.price_per_person, cur)} per person.` : 'Pricing not yet calculated. Use the Pricing Calculator first.'}
               </div>
             )}
+            {model && model.tier_note ? (
+              <div style={{ fontSize: 11, color: '#666', marginTop: 6, fontStyle: 'italic' }}>{model.tier_note}</div>
+            ) : null}
 
             {/* Hotel programme */}
             {programme.length > 0 && (

@@ -130,10 +130,32 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
         <Summary label="Misc total" value={formatMoney(totals.totalMisc, cur)} />
       </div>
 
-      {/* Pax tiers */}
-      <div style={{ marginBottom: 10 }}>
-        <label style={{ fontSize: 11, color: '#888', fontWeight: 500, display: 'block', marginBottom: 4 }}>Pax tiers (comma separated)</label>
-        <input style={{ ...inp, maxWidth: 320 }} value={m.tiers.join(', ')} onChange={e => setTiers(e.target.value)} placeholder="19, 24, 29, 34, 39, 44" />
+      {/* Tiers + FOC calculator */}
+      <div style={{ background: '#FAFAFE', border: '0.5px solid #E5E3F5', borderRadius: 10, padding: 12, marginBottom: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10, marginBottom: 10 }}>
+          <div>
+            <label style={{ fontSize: 10.5, color: '#888', fontWeight: 500, display: 'block', marginBottom: 3 }}>Tier low bounds (comma separated)</label>
+            <input style={inp} value={m.tiers.join(', ')} onChange={e => setTiers(e.target.value)} placeholder="14, 20, 25, 30, 35, 40" />
+          </div>
+          <div>
+            <label style={{ fontSize: 10.5, color: '#888', fontWeight: 500, display: 'block', marginBottom: 3 }}>Range span</label>
+            <input style={cellNum} type="number" value={m.tier_span} onChange={e => set('tier_span', Math.max(1, +e.target.value))} />
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+          <div>
+            <label style={{ fontSize: 10.5, color: '#854F0B', fontWeight: 600, display: 'block', marginBottom: 3 }}>FOC – Hotel free (room free, only entrances+meals spread)</label>
+            <input style={cellNum} type="number" min={0} value={m.foc_hotel} onChange={e => set('foc_hotel', Math.max(0, +e.target.value))} />
+          </div>
+          <div>
+            <label style={{ fontSize: 10.5, color: '#534AB7', fontWeight: 600, display: 'block', marginBottom: 3 }}>FOC – Full free (hotel+entrances+meals spread)</label>
+            <input style={cellNum} type="number" min={0} value={m.foc_full} onChange={e => set('foc_full', Math.max(0, +e.target.value))} />
+          </div>
+        </div>
+        <div>
+          <label style={{ fontSize: 10.5, color: '#888', fontWeight: 500, display: 'block', marginBottom: 3 }}>Note next to ranges (free text, shown on quote)</label>
+          <input style={inp} value={m.tier_note} onChange={e => set('tier_note', e.target.value)} placeholder="e.g. 1 FOC included · prices subject to availability" />
+        </div>
       </div>
 
       {/* Price tier table */}
@@ -141,19 +163,21 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
           <thead>
             <tr style={{ background: '#1a2a3a' }}>
-              <th style={{ ...th, color: '#fff', padding: '8px 12px' }}>Group Size (pax)</th>
+              <th style={{ ...th, color: '#fff', padding: '8px 12px' }}>Group Size</th>
               <th style={{ ...th, color: '#fff', textAlign: 'right', padding: '8px 12px' }}>Net Base /pp</th>
+              <th style={{ ...th, color: '#fff', textAlign: 'right', padding: '8px 12px' }}>FOC /pp</th>
               <th style={{ ...th, color: '#fff', textAlign: 'right', padding: '8px 12px' }}>Price /pp (Double)</th>
               <th style={{ ...th, color: '#fff', textAlign: 'right', padding: '8px 12px' }}>Single Room</th>
             </tr>
           </thead>
           <tbody>
             {totals.tierResults.length === 0 ? (
-              <tr><td colSpan={4} style={{ padding: 14, textAlign: 'center', color: '#bbb', fontSize: 12 }}>Add days and pax tiers to see pricing.</td></tr>
+              <tr><td colSpan={5} style={{ padding: 14, textAlign: 'center', color: '#bbb', fontSize: 12 }}>Add days and pax tiers to see pricing.</td></tr>
             ) : totals.tierResults.map((t, i) => (
               <tr key={i} style={{ borderBottom: '0.5px solid #f5f5f5' }}>
-                <td style={{ padding: '9px 12px', fontSize: 13, fontWeight: 600 }}>{t.pax} pax</td>
+                <td style={{ padding: '9px 12px', fontSize: 13, fontWeight: 600 }}>{t.pax}–{t.paxHigh} pax</td>
                 <td style={{ padding: '9px 12px', fontSize: 12.5, textAlign: 'right', color: '#888' }}>{formatMoney(t.totalNetBase, cur)}</td>
+                <td style={{ padding: '9px 12px', fontSize: 12, textAlign: 'right', color: t.focAlloc ? '#854F0B' : '#ccc' }}>{t.focAlloc ? formatMoney(t.focAlloc, cur) : '—'}</td>
                 <td style={{ padding: '9px 12px', fontSize: 14, textAlign: 'right', fontWeight: 700, color: '#0F6E56' }}>{formatMoney(t.totalPrice, cur)}</td>
                 <td style={{ padding: '9px 12px', fontSize: 12.5, textAlign: 'right', color: '#534AB7' }}>{formatMoney(singleRoomPrice(m, t), cur)}</td>
               </tr>
@@ -162,7 +186,7 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
         </table>
       </div>
       <div style={{ fontSize: 10.5, color: '#aaa', marginTop: 8, lineHeight: 1.5 }}>
-        Net Base = transport + staff allocation + hotel + misc per person. Price = Net Base × (1 + margin). Single Room = double base + single supplement, with margin. Saving stores the best-tier price on the group.
+        Price divided by the low bound minus FOC. FOC "hotel free" spreads only entrances+meals; FOC "full" spreads hotel+entrances+meals. Vehicle &amp; guide are never part of FOC. Staff overnight always includes VAT.
       </div>
     </div>
   )
@@ -175,7 +199,11 @@ function normalize(p: any): PricingModel {
     guide_fee_per_day: p.guide_fee_per_day ?? 300,
     vat_percent: p.vat_percent ?? 18,
     margin_percent: p.margin_percent ?? 20,
-    tiers: Array.isArray(p.tiers) && p.tiers.length ? p.tiers : [19, 24, 29, 34, 39, 44],
+    tiers: Array.isArray(p.tiers) && p.tiers.length ? p.tiers : [14, 20, 25, 30, 35, 40],
+    tier_span: p.tier_span ?? 5,
+    foc_hotel: p.foc_hotel ?? 0,
+    foc_full: p.foc_full ?? 0,
+    tier_note: p.tier_note ?? '',
     days: Array.isArray(p.days) ? p.days : [],
   }
 }

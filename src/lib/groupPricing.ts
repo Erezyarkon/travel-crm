@@ -17,7 +17,11 @@ export interface PricingModel {
   guide_fee_per_day: number
   vat_percent: number      // applied to staff overnight (default 18)
   margin_percent: number   // profit margin (default 20)
-  tiers: number[]          // pax tiers to price (e.g. [14,19,24,29,34,39,44])
+  tiers: number[]          // LOW bound of each pax tier (e.g. [14,20,25,30,35,40])
+  tier_span: number        // size of each range (e.g. 5 -> 14-19, 20-24...)
+  foc_hotel: number        // FOC where the hotel room is free (only entrances+meals spread)
+  foc_full: number         // FOC where full cost (hotel+entrances+meals) spreads
+  tier_note: string        // free-text note shown next to tiers in the quote
   days: PricingDay[]
 }
 
@@ -26,16 +30,22 @@ export const DEFAULT_PRICING: PricingModel = {
   guide_fee_per_day: 300,
   vat_percent: 18,
   margin_percent: 20,
-  tiers: [19, 24, 29, 34, 39, 44],
+  tiers: [14, 20, 25, 30, 35, 40],
+  tier_span: 5,
+  foc_hotel: 0,
+  foc_full: 0,
+  tier_note: '',
   days: [],
 }
 
 export interface TierResult {
-  pax: number
+  pax: number              // LOW bound (the number we divide by)
+  paxHigh: number          // HIGH bound of the range (pax + span - 1)
   transportAlloc: number
   staffAlloc: number
   netBaseCost: number      // hotel + misc per person
-  totalNetBase: number     // allocations + net base
+  focAlloc: number         // FOC cost spread per paying person
+  totalNetBase: number     // allocations + net base + foc
   totalPrice: number       // × (1 + margin)
 }
 
@@ -77,19 +87,32 @@ export function computePricing(m: PricingModel): PricingTotals {
     totalMisc += (Number(d.misc) || 0)
   }
 
-  const netBaseCost = totalHotelDbl + totalMisc  // per-person base (hotel + misc)
+  const netBaseCost = totalHotelDbl + totalMisc  // per-person base (hotel + misc = hotel + entrances + meals)
+  const span = m.tier_span && m.tier_span > 0 ? m.tier_span : 5
+  const focHotel = Math.max(0, Number(m.foc_hotel) || 0)
+  const focFull = Math.max(0, Number(m.foc_full) || 0)
+  // FOC "hotel free": hotel room is free from the hotel, so only entrances+meals (misc) spread.
+  // FOC "full": full per-person base (hotel + entrances + meals) spreads.
+  // Vehicle and guide are NEVER part of FOC cost.
+  const focCostTotal = (totalMisc * focHotel) + (netBaseCost * focFull)
+  const focTotalCount = focHotel + focFull
 
   const tierResults: TierResult[] = (m.tiers || []).map(pax => {
+    const paxHigh = pax + span - 1
     if (!pax || pax <= 0) {
-      return { pax, transportAlloc: 0, staffAlloc: 0, netBaseCost, totalNetBase: netBaseCost, totalPrice: netBaseCost }
+      return { pax, paxHigh, transportAlloc: 0, staffAlloc: 0, netBaseCost, focAlloc: 0, totalNetBase: netBaseCost, totalPrice: netBaseCost }
     }
-    // Transport allocation: ≤15 MINI, ≤30 MIDI, else BUS — divided by pax
+    // Paying pax = low bound minus the FOC (they don't pay). Divide everything by paying pax.
+    const payingPax = Math.max(1, pax - focTotalCount)
+    // Transport allocation: ≤15 MINI, ≤30 MIDI, else BUS — divided by paying pax
     const transportTotal = pax <= 15 ? totalMini : pax <= 30 ? totalMidi : totalBus
-    const transportAlloc = transportTotal / pax
-    const staffAlloc = totalGuideOvernight / pax
-    const totalNetBase = transportAlloc + staffAlloc + netBaseCost
+    const transportAlloc = transportTotal / payingPax
+    const staffAlloc = totalGuideOvernight / payingPax
+    // FOC cost spread across the paying pax
+    const focAlloc = focCostTotal / payingPax
+    const totalNetBase = transportAlloc + staffAlloc + netBaseCost + focAlloc
     const totalPrice = totalNetBase * (1 + (m.margin_percent || 0) / 100)
-    return { pax, transportAlloc, staffAlloc, netBaseCost, totalNetBase, totalPrice }
+    return { pax, paxHigh, transportAlloc, staffAlloc, netBaseCost, focAlloc, totalNetBase, totalPrice }
   })
 
   return { totalMini, totalMidi, totalBus, totalGuideOvernight, totalHotelDbl, totalMisc, tierResults, numDays }
