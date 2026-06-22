@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Users2, Calendar, MapPin, Utensils, DollarSign, Trash2, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Users2, Calendar, MapPin, Utensils, DollarSign, Trash2, ExternalLink, FileText } from 'lucide-react'
 import {
   Group, getGroup, updateGroup, deleteGroup, groupClients, groupBookings,
   GROUP_STAGES, GROUP_STAGE_ORDER,
@@ -8,6 +8,7 @@ import {
 import { formatMoney } from '../lib/currency'
 import { useToast } from '../lib/toast'
 import GroupPricingPanel from '../components/GroupPricingPanel'
+import GroupQuoteModal from '../components/GroupQuoteModal'
 
 export default function GroupCard() {
   const { id } = useParams()
@@ -17,6 +18,7 @@ export default function GroupCard() {
   const [clients, setClients] = useState<any[]>([])
   const [bookings, setBookings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [showQuote, setShowQuote] = useState(false)
 
   async function load() {
     if (!id) return
@@ -76,9 +78,14 @@ export default function GroupCard() {
               </div>
             </div>
           </div>
-          <button onClick={handleDelete} title="Delete group" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ccc', padding: 4 }}>
-            <Trash2 size={16} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={() => setShowQuote(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#1a2a3a', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontWeight: 600, fontSize: 12.5 }}>
+              <FileText size={14} /> Quotation
+            </button>
+            <button onClick={handleDelete} title="Delete group" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ccc', padding: 4 }}>
+              <Trash2 size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -181,6 +188,8 @@ export default function GroupCard() {
           <div style={{ fontSize: 13, color: '#333', whiteSpace: 'pre-wrap' }}>{group.notes}</div>
         </div>
       )}
+
+      {showQuote && <GroupQuoteModal group={group} onClose={() => setShowQuote(false)} />}
     </div>
   )
 }
