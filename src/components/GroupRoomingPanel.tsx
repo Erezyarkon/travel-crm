@@ -105,7 +105,17 @@ export default function GroupRoomingPanel({ group, onSaved }: { group: any; onSa
                 <td style={{ padding: '4px 4px' }}><input style={{ ...inp, width: 80 }} value={r.nationality} onChange={e => setRoom(i, { nationality: e.target.value })} placeholder="usa" /></td>
                 <td style={{ padding: '4px 4px' }}><input style={{ ...inp, width: 100 }} value={r.passport} onChange={e => setRoom(i, { passport: e.target.value })} /></td>
                 <td style={{ padding: '4px 4px' }}><input style={{ ...inp, width: 100 }} value={r.passport2} onChange={e => setRoom(i, { passport2: e.target.value })} /></td>
-                <td style={{ padding: '4px 4px' }}><input style={{ ...inp, minWidth: 150 }} value={r.comments} onChange={e => setRoom(i, { comments: e.target.value })} placeholder="1 double bed…" /></td>
+                <td style={{ padding: '4px 4px' }}>
+                  <input style={{ ...inp, minWidth: 150 }} value={r.comments} onChange={e => setRoom(i, { comments: e.target.value })} placeholder="e.g. TWIN beds…" />
+                  <div style={{ display: 'flex', gap: 3, marginTop: 3, flexWrap: 'wrap' }}>
+                    {['Double bed', 'TWIN beds', 'Single room', 'Triple - 3 beds', 'Tour Leader'].map(tag => (
+                      <button key={tag} onClick={() => setRoom(i, { comments: r.comments ? `${r.comments}; ${tag}` : tag })}
+                        style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, border: '0.5px solid #d8d8d8', background: '#fafafa', color: '#777', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        +{tag}
+                      </button>
+                    ))}
+                  </div>
+                </td>
                 <td style={{ padding: '4px 4px', whiteSpace: 'nowrap' }}>
                   <button onClick={() => dupRoom(i)} title="Duplicate" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aaa', padding: 2 }}><Copy size={12} /></button>
                   <button onClick={() => removeRoom(i)} title="Remove" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ccc', padding: 2 }}><Trash2 size={12} /></button>
@@ -120,8 +130,13 @@ export default function GroupRoomingPanel({ group, onSaved }: { group: any; onSa
         <Plus size={13} /> Add Room
       </button>
 
-      <div style={{ fontSize: 10.5, color: '#aaa', marginTop: 10, lineHeight: 1.5 }}>
-        One row per room. Put both names of a couple in "First Name(s)" (e.g. "Ricardo, Terri") with Adults = 2. "Beds" = number of beds the hotel should set up. "Export for Hotel" produces the exact Excel format hotels require — then choose the hotel in the file's dropdown and send.
+      <div style={{ fontSize: 10.5, color: '#888', marginTop: 10, lineHeight: 1.6, background: '#FAFAFE', border: '0.5px solid #E5E3F5', borderRadius: 8, padding: '10px 12px' }}>
+        <strong style={{ color: '#534AB7' }}>"Beds" (Share) = total people in the same physical room:</strong><br />
+        • <strong>Single room</strong> → one name, Adult 1, <strong>leave Beds blank</strong><br />
+        • <strong>Double (couple)</strong> → both names on one row ("Charles, Elizabet"), Adult 2, <strong>Beds = 2</strong><br />
+        • <strong>Twin (2 people, separate beds)</strong> → a name on each of two rows, Adult 1 each, <strong>Beds = 2</strong> on the first row · add "TWIN beds" in comments<br />
+        • <strong>Triple (3 separate beds)</strong> → e.g. one person on row 1 + a couple on row 2, <strong>Beds = 3</strong> on the first row<br />
+        Use the comment tags to mark bed type. "Export for Hotel" produces the exact Excel hotels require — then pick the hotel in the file's dropdown and send.
       </div>
     </div>
   )
