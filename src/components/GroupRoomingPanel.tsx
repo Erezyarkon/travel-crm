@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { BedDouble, Plus, Trash2, Copy, Download, Save } from 'lucide-react'
-import { Room, emptyRoom, exportRoomingList } from '../lib/rooming'
+import { BedDouble, Plus, Trash2, Copy, Download, Save, Upload } from 'lucide-react'
+import { Room, emptyRoom, exportRoomingList, importRoomingList } from '../lib/rooming'
 import { updateGroup } from '../lib/groups'
 import { useToast } from '../lib/toast'
 
@@ -9,6 +9,20 @@ export default function GroupRoomingPanel({ group, onSaved }: { group: any; onSa
   const [rooms, setRooms] = useState<Room[]>(() => Array.isArray(group.rooming) ? group.rooming : [])
   const [guideDriver, setGuideDriver] = useState<string>(group.guide_driver || '')
   const [busy, setBusy] = useState(false)
+  const fileRef = React.useRef<HTMLInputElement>(null)
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const { rooms: imported, guideDriver: gd, error } = await importRoomingList(file)
+    if (e.target) e.target.value = ''  // allow re-importing same file
+    if (error) { toast.error('Could not read the file'); return }
+    if (imported.length === 0) { toast.error('No rooms found in the file'); return }
+    if (rooms.length > 0 && !window.confirm(`Replace the current ${rooms.length} room(s) with ${imported.length} from the file?`)) return
+    setRooms(imported)
+    if (gd) setGuideDriver(gd)
+    toast.success(`Imported ${imported.length} rooms`)
+  }
 
   function setRoom(i: number, patch: Partial<Room>) {
     setRooms(rs => rs.map((r, j) => j === i ? { ...r, ...patch } : r))
@@ -57,6 +71,10 @@ export default function GroupRoomingPanel({ group, onSaved }: { group: any; onSa
           <span style={{ fontSize: 11, color: '#999', fontWeight: 400 }}>· {rooms.length} rooms · {totalPax} pax</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleImport} style={{ display: 'none' }} />
+          <button onClick={() => fileRef.current?.click()} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', color: '#185FA5', border: '0.5px solid #9DC3E8', borderRadius: 8, padding: '7px 13px', cursor: 'pointer', fontWeight: 600, fontSize: 12 }}>
+            <Upload size={13} /> Import from Excel
+          </button>
           <button onClick={doExport} disabled={rooms.length === 0} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#0F6E56', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 13px', cursor: rooms.length === 0 ? 'default' : 'pointer', fontWeight: 600, fontSize: 12, opacity: rooms.length === 0 ? 0.5 : 1 }}>
             <Download size={13} /> Export for Hotel
           </button>
