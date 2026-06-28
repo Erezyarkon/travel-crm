@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Users2, Calendar, MapPin, Utensils, DollarSign, Trash2, ExternalLink, FileText } from 'lucide-react'
+import { ArrowLeft, Users2, Calendar, MapPin, Utensils, DollarSign, Trash2, ExternalLink, FileText, CalendarPlus } from 'lucide-react'
 import {
   Group, getGroup, updateGroup, deleteGroup, groupClients, groupBookings,
-  GROUP_STAGES, GROUP_STAGE_ORDER,
+  GROUP_STAGES, GROUP_STAGE_ORDER, createBookingsFromGroup,
 } from '../lib/groups'
+import { useAuth } from '../lib/auth'
 import { formatMoney } from '../lib/currency'
 import { useToast } from '../lib/toast'
 import GroupPricingPanel from '../components/GroupPricingPanel'
@@ -15,6 +16,8 @@ export default function GroupCard() {
   const { id } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
+  const { user } = useAuth()
+  const [creatingBk, setCreatingBk] = useState(false)
   const [group, setGroup] = useState<Group | null>(null)
   const [clients, setClients] = useState<any[]>([])
   const [bookings, setBookings] = useState<any[]>([])
@@ -43,6 +46,22 @@ export default function GroupCard() {
     await deleteGroup(id)
     toast.info('Group deleted')
     navigate('/groups')
+  }
+
+  async function handleCreateBookings() {
+    if (!group) return
+    if (!group.pricing || !group.pricing.days || group.pricing.days.length === 0) {
+      toast.error('Fill the pricing calculator first')
+      return
+    }
+    if (!window.confirm('Create draft bookings (hotels, coach, guide) from the pricing? Entrance fees and meals you add manually afterwards.')) return
+    setCreatingBk(true)
+    const { error, clientId, created } = await createBookingsFromGroup(group, user?.id || null)
+    setCreatingBk(false)
+    if (error) { toast.error(error); return }
+    toast.success(`Created ${created} bookings`)
+    await load()
+    if (clientId) navigate(`/clients/${clientId}`)
   }
 
   if (loading) return <div style={{ padding: 24, color: '#888' }}>Loading…</div>
@@ -80,6 +99,9 @@ export default function GroupCard() {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={handleCreateBookings} disabled={creatingBk} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#0F6E56', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', cursor: creatingBk ? 'default' : 'pointer', fontWeight: 600, fontSize: 12.5, opacity: creatingBk ? 0.6 : 1 }}>
+              <CalendarPlus size={14} /> {creatingBk ? 'Creating…' : 'Create Bookings'}
+            </button>
             <button onClick={() => setShowQuote(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#1a2a3a', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontWeight: 600, fontSize: 12.5 }}>
               <FileText size={14} /> Quotation
             </button>
