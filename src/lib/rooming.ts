@@ -182,6 +182,25 @@ export async function exportRoomingList(group: any, rooms: Room[]) {
     r++
   }
 
+  // The template's hotel dropdown is an x14 extension validation that ExcelJS
+  // doesn't preserve, and its numeric/date validations span millions of rows
+  // (causing a "problem with content" warning). Fix: clear all, then re-add the
+  // hotel dropdown as a standard list validation referencing the same range.
+  try {
+    const anyWs = ws as any
+    if (anyWs.dataValidations && anyWs.dataValidations.model) {
+      anyWs.dataValidations.model = {}
+    }
+    ws.getCell('O4').dataValidation = {
+      type: 'list',
+      allowBlank: true,
+      formulae: ['Sheet1!$L$4:$L$18'],
+      showInputMessage: true,
+      promptTitle: 'Please choose Hotel',
+      prompt: 'Select the hotel for this rooming list',
+    }
+  } catch { /* ignore */ }
+
   const buf = await wb.xlsx.writeBuffer()
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
   const url = URL.createObjectURL(blob)
