@@ -17,6 +17,8 @@ export interface Group {
   owner_id: string | null
   created_at: string
   pricing?: any
+  rooming?: any
+  guide_driver?: string | null
 }
 
 // Stages mirror EM's real workflow:

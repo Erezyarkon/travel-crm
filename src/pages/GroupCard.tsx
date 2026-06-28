@@ -8,6 +8,7 @@ import {
 import { formatMoney } from '../lib/currency'
 import { useToast } from '../lib/toast'
 import GroupPricingPanel from '../components/GroupPricingPanel'
+import GroupRoomingPanel from '../components/GroupRoomingPanel'
 import GroupQuoteModal from '../components/GroupQuoteModal'
 
 export default function GroupCard() {
@@ -140,6 +141,9 @@ export default function GroupCard() {
 
       {/* Pricing calculator */}
       <GroupPricingPanel group={group} onSaved={(price, single) => setGroup(g => g ? { ...g, price_per_person: price, single_supplement: single } : g)} />
+
+      {/* Rooming list */}
+      <GroupRoomingPanel group={group} onSaved={(rooms, guideDriver) => setGroup(g => g ? { ...g, rooming: rooms, guide_driver: guideDriver } : g)} />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {/* Members */}
