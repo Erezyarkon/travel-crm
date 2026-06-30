@@ -14,6 +14,7 @@ import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
 import { AuthProvider, useAuth } from './lib/auth'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from './lib/toast'
 import './App.css'
 
@@ -49,15 +50,28 @@ function AppRoutes() {
   )
 }
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,        // data considered fresh for 1 minute — no refetch on quick nav
+      gcTime: 5 * 60_000,       // keep cached data 5 minutes after last use
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+})
+
 function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </ToastProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <ToastProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </ToastProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   )
 }
 

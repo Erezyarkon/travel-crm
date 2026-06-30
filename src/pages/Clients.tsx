@@ -1,45 +1,30 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Download, Users, LayoutGrid, List as ListIcon } from 'lucide-react'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import EmptyState from '../components/EmptyState'
 import { CLIENT_STATUS as statusInfoShared, StatusBadge } from '../lib/status'
 import { exportToCsv } from '../lib/exportCsv'
 import { SkeletonRows } from '../components/Skeleton'
+import { useClients } from '../lib/queries'
 
 export default function Clients() {
   const navigate = useNavigate()
   const { profile } = useAuth()
-  const [clients, setClients] = useState<any[]>([])
+  const { data: clientsData, isLoading: loading } = useClients(profile)
+  const clients: any[] = clientsData || []
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortKey, setSortKey] = useState('created')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [view, setView] = useState<'list' | 'grid'>('list')
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    async function load() {
-      if (!profile) return
-      setLoading(true)
-      let q = supabase.from('clients').select('*').order('created_at', { ascending: false })
-      if (statusFilter !== 'all') q = q.eq('status', statusFilter)
-      // Agents only see clients they own. Admins and viewers see everything.
-      if (profile.role === 'agent') q = q.eq('owner_id', profile.id)
-      const { data } = await q
-      setClients(data || [])
-      setLoading(false)
-    }
-    load()
-  }, [statusFilter, profile])
-
-  const filtered = clients.filter(c =>
+  const filtered = (statusFilter === 'all' ? clients : clients.filter((c: any) => c.status === statusFilter)).filter((c: any) =>
     c.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     c.file_number?.toLowerCase().includes(search.toLowerCase()) ||
     c.phone?.includes(search) ||
     c.email?.toLowerCase().includes(search.toLowerCase())
-  ).sort((a, b) => {
+  ).sort((a: any, b: any) => {
     const dir = sortDir === 'asc' ? 1 : -1
     let va: any, vb: any
     switch (sortKey) {
