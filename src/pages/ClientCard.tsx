@@ -365,6 +365,7 @@ export default function ClientCard() {
 function VoucherModal({ booking: b, client, travelers, onClose }: any) {
   const [company, setCompany] = useState(getCachedSettings())
   const [payments, setPayments] = useState<any[]>([])
+  const [showPrices, setShowPrices] = useState(true)
   useEffect(() => { loadSettings().then(setCompany) }, [])
   useEffect(() => { listPayments(b.id).then(setPayments) }, [b.id])
   // Stable voucher number derived from the booking id (not Date.now())
@@ -400,7 +401,11 @@ function VoucherModal({ booking: b, client, travelers, onClose }: any) {
   return (
     <div style={s.overlay} id="voucher-print-root">
       <div style={{ maxWidth:860, margin:'0 auto' }}>
-        <div style={{ display:'flex', gap:8, marginBottom:12, justifyContent:'flex-end' }} className="no-print">
+        <div style={{ display:'flex', gap:8, marginBottom:12, justifyContent:'flex-end', alignItems:'center' }} className="no-print">
+          <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, color:'#555', cursor:'pointer', marginRight:'auto' }}>
+            <input type="checkbox" checked={showPrices} onChange={e => setShowPrices(e.target.checked)} />
+            Include prices
+          </label>
           {client.phone && (
             <button onClick={() => openWhatsApp(client.phone, isPaid
               ? voucherMessage({ clientName: client.full_name, serviceName: b.service_name, fileNumber: client.file_number, companyName: company.company_name })
@@ -520,14 +525,16 @@ function VoucherModal({ booking: b, client, travelers, onClose }: any) {
             </table>
 
             {/* Pricing */}
-            <div style={s.priceStrip}>
-              {[['Total price',formatMoney(b.total_price, b.currency),'#1a2a3a'],['Paid',formatMoney(paidAmount, b.currency),'#0F6E56'],['Balance due',formatMoney(balanceNum, b.currency),balanceNum>0?'#854F0B':'#0F6E56'],['Status',isPaid?'PAID ✓':STATUS_LABELS[b.status],isPaid?'#0F6E56':'#854F0B']].map(([lbl,val,clr],i,arr) => (
-                <div key={lbl} style={{ flex:1, textAlign:'center', borderRight:i<arr.length-1?'0.5px solid #dde3ea':'none' }}>
-                  <span style={{ fontSize:8, color:'#888', textTransform:'uppercase', display:'block', marginBottom:2 }}>{lbl}</span>
-                  <span style={{ fontSize:i===3?12:16, fontWeight:700, color:clr }}>{val}</span>
-                </div>
-              ))}
-            </div>
+            {showPrices && (
+              <div style={s.priceStrip}>
+                {[['Total price',formatMoney(b.total_price, b.currency),'#1a2a3a'],['Paid',formatMoney(paidAmount, b.currency),'#0F6E56'],['Balance due',formatMoney(balanceNum, b.currency),balanceNum>0?'#854F0B':'#0F6E56'],['Status',isPaid?'PAID ✓':STATUS_LABELS[b.status],isPaid?'#0F6E56':'#854F0B']].map(([lbl,val,clr],i,arr) => (
+                  <div key={lbl} style={{ flex:1, textAlign:'center', borderRight:i<arr.length-1?'0.5px solid #dde3ea':'none' }}>
+                    <span style={{ fontSize:8, color:'#888', textTransform:'uppercase', display:'block', marginBottom:2 }}>{lbl}</span>
+                    <span style={{ fontSize:i===3?12:16, fontWeight:700, color:clr }}>{val}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Notes */}
             {b.notes && <div style={{ background:'#fffbf0', border:'0.5px solid #f5c842', borderRadius:6, padding:'7px 10px', fontSize:10, color:'#412402', marginBottom:10 }}><strong style={{ display:'block', marginBottom:3, fontSize:8, textTransform:'uppercase', letterSpacing:'.3px', color:'#1a2a3a' }}>Special requests</strong>{b.notes}</div>}

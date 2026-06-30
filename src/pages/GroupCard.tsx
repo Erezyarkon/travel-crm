@@ -11,6 +11,7 @@ import { useToast } from '../lib/toast'
 import GroupPricingPanel from '../components/GroupPricingPanel'
 import GroupRoomingPanel from '../components/GroupRoomingPanel'
 import GroupQuoteModal from '../components/GroupQuoteModal'
+import GroupItineraryPanel from '../components/GroupItineraryPanel'
 
 export default function GroupCard() {
   const { id } = useParams()
@@ -166,6 +167,9 @@ export default function GroupCard() {
 
       {/* Rooming list */}
       <GroupRoomingPanel group={group} onSaved={(rooms, guideDriver) => setGroup(g => g ? { ...g, rooming: rooms, guide_driver: guideDriver } : g)} />
+
+      {/* Itinerary */}
+      <GroupItineraryPanel groupId={group.id} groupName={group.name} />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {/* Members */}
