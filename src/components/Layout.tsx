@@ -1,20 +1,21 @@
 import React from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Users, Users2, CalendarDays, CalendarRange, Building2, BarChart3, Settings, Plane, Plus, LogOut } from 'lucide-react'
+import { LayoutDashboard, Users, Users2, CalendarDays, CalendarRange, Building2, BarChart3, Settings, Plane, Plus, LogOut, Map } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import GlobalSearch from './GlobalSearch'
 
 const ROLE_LABELS: Record<string, string> = { admin: 'Administrator', agent: 'Agent', viewer: 'Viewer' }
 
 const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/clients',   icon: Users,           label: 'Clients' },
-  { to: '/groups',    icon: Users2,          label: 'Groups' },
-  { to: '/bookings',  icon: CalendarDays,    label: 'Bookings' },
-  { to: '/calendar',  icon: CalendarRange,   label: 'Calendar' },
-  { to: '/suppliers', icon: Building2,       label: 'Suppliers' },
-  { to: '/reports',   icon: BarChart3,       label: 'Reports' },
-  { to: '/settings',  icon: Settings,        label: 'Settings' },
+  { to: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/clients',      icon: Users,           label: 'Clients' },
+  { to: '/groups',       icon: Users2,          label: 'Groups' },
+  { to: '/bookings',     icon: CalendarDays,    label: 'Bookings' },
+  { to: '/calendar',     icon: CalendarRange,   label: 'Calendar' },
+  { to: '/suppliers',    icon: Building2,       label: 'Suppliers' },
+  { to: '/itineraries',  icon: Map,             label: 'Itineraries' },
+  { to: '/reports',      icon: BarChart3,       label: 'Reports' },
+  { to: '/settings',     icon: Settings,        label: 'Settings' },
 ]
 
 export default function Layout() {

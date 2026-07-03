@@ -10,6 +10,7 @@ import Calendar from './pages/Calendar'
 import Suppliers from './pages/Suppliers'
 import Groups from './pages/Groups'
 import GroupCard from './pages/GroupCard'
+import Itineraries from './pages/Itineraries'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
@@ -42,6 +43,7 @@ function AppRoutes() {
         <Route path="suppliers" element={<Suppliers />} />
         <Route path="groups" element={<Groups />} />
         <Route path="groups/:id" element={<GroupCard />} />
+        <Route path="itineraries" element={<Itineraries />} />
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<Settings />} />
       </Route>
