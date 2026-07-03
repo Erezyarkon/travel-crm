@@ -23,7 +23,7 @@ export default function Layout() {
   const { profile, signOut } = useAuth()
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <aside style={{ width: 200, background: '#1a2a3a', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+      <aside dir="ltr" style={{ width: 200, background: '#1a2a3a', display: 'flex', flexDirection: 'column', flexShrink: 0, direction: 'ltr', textAlign: 'left' }}>
         <div style={{ padding: '20px 16px', borderBottom: '1px solid #2d3f50' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ background: '#f5c842', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -73,7 +73,7 @@ export default function Layout() {
         </div>
       </aside>
 
-      <main style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+      <main dir="ltr" style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', direction: 'ltr', textAlign: 'left' }}>
         <div style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(247,248,250,0.85)', backdropFilter: 'blur(8px)', borderBottom: '0.5px solid #e8e8e8', padding: '10px 24px', display: 'flex', justifyContent: 'center' }}>
           <GlobalSearch />
         </div>

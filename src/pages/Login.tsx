@@ -22,7 +22,7 @@ export default function Login() {
   const label: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: '#555', marginBottom: 6, display: 'block' }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f2f5', padding: 20 }}>
+    <div dir="ltr" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f2f5', padding: 20, direction: 'ltr', textAlign: 'left' }}>
       <div style={{ width: '100%', maxWidth: 380, background: '#fff', borderRadius: 16, border: '0.5px solid #e5e5e5', padding: 32, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24 }}>
           <div style={{ background: '#f5c842', borderRadius: 12, width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
