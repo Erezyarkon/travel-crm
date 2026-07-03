@@ -9,17 +9,17 @@ import { useToast } from '../lib/toast'
 
 // Column widths — shared between header and rows so they never drift
 const COL = {
-  date:    130,
-  hotel:   140,
-  board:   46,
-  dbl:     64,
-  sgl:     56,
-  meals:   60,
-  entr:    60,
-  guide:   60,
-  shab:    64,
-  misc:    54,
-  staff:   80,
+  date:    128,
+  hotel:   138,
+  board:   48,
+  dbl:     66,
+  sgl:     66,
+  meals:   64,
+  entr:    64,
+  guide:   62,
+  shab:    72,
+  misc:    56,
+  staff:   86,
   actions: 44,
 }
 
@@ -87,7 +87,7 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
   }
 
   const inp: React.CSSProperties = { width: '100%', padding: '5px 7px', border: '0.5px solid #d8d8d8', borderRadius: 6, fontSize: 11.5, outline: 'none', boxSizing: 'border-box', background: '#fff' }
-  const num: React.CSSProperties = { ...inp, textAlign: 'right' }
+  const num: React.CSSProperties = { ...inp, textAlign: 'right', MozAppearance: 'textfield' as any }
 
   const TH = ({ label, w, right }: { label: string; w: number; right?: boolean }) => (
     <th style={{ fontSize: 9.5, fontWeight: 700, color: '#666', textTransform: 'uppercase', letterSpacing: 0.3, padding: '7px 4px', textAlign: right ? 'right' : 'left', whiteSpace: 'nowrap', width: w, minWidth: w }}>
@@ -97,6 +97,11 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
 
   return (
     <div style={{ background: '#fff', border: '0.5px solid #eee', borderRadius: 12, padding: 18, marginBottom: 16 }}>
+      <style>{`
+        .pricing-table input[type=number]::-webkit-inner-spin-button,
+        .pricing-table input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .pricing-table input[type=number] { -moz-appearance: textfield; }
+      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div style={{ fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 7 }}>
           <Calculator size={16} color="#534AB7" /> Pricing Calculator
@@ -107,7 +112,7 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
       </div>
 
       {/* Global settings */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 14, background: '#fafafa', padding: 10, borderRadius: 8 }}>
+      <div className="pricing-table" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 14, background: '#fafafa', padding: 10, borderRadius: 8 }}>
         <Field label="Mini /day"><input style={num} type="number" value={m.vehicle.mini} onChange={e => setVehicle('mini', +e.target.value)} /></Field>
         <Field label="Midi /day"><input style={num} type="number" value={m.vehicle.midi} onChange={e => setVehicle('midi', +e.target.value)} /></Field>
         <Field label="Bus /day"><input style={num} type="number" value={m.vehicle.bus} onChange={e => setVehicle('bus', +e.target.value)} /></Field>
@@ -118,7 +123,21 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
 
       {/* Day-by-day table */}
       <div style={{ overflowX: 'auto', marginBottom: 6 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table className="pricing-table" style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: Object.values(COL).reduce((a, b) => a + b, 0) }}>
+          <colgroup>
+            <col style={{ width: COL.date }} />
+            <col style={{ width: COL.hotel }} />
+            <col style={{ width: COL.board }} />
+            <col style={{ width: COL.dbl }} />
+            <col style={{ width: COL.sgl }} />
+            <col style={{ width: COL.meals }} />
+            <col style={{ width: COL.entr }} />
+            <col style={{ width: COL.guide }} />
+            <col style={{ width: COL.shab }} />
+            <col style={{ width: COL.misc }} />
+            <col style={{ width: COL.staff }} />
+            <col style={{ width: COL.actions }} />
+          </colgroup>
           <thead>
             <tr style={{ borderBottom: '1.5px solid #e0e0e0', background: '#f8f8fc' }}>
               <TH label="Date"      w={COL.date} />
@@ -140,27 +159,27 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
               <tr><td colSpan={12} style={{ padding: 18, textAlign: 'center', color: '#bbb', fontSize: 12 }}>No days yet — click "Add Day" below.</td></tr>
             ) : m.days.map((d, i) => (
               <tr key={i} style={{ borderBottom: '0.5px solid #f3f3f3' }}>
-                <td style={{ padding: '4px 4px' }}><input style={{ ...inp, width: COL.date - 8 }} type="date" value={d.date} onChange={e => setDay(i, { date: e.target.value })} /></td>
-                <td style={{ padding: '4px 4px' }}><input style={{ ...inp, width: COL.hotel - 8 }} value={d.hotel} onChange={e => setDay(i, { hotel: e.target.value })} placeholder="Hotel name" /></td>
-                <td style={{ padding: '4px 4px' }}><input style={{ ...inp, width: COL.board - 4 }} value={d.board} onChange={e => setDay(i, { board: e.target.value })} /></td>
-                <td style={{ padding: '4px 4px' }}><input style={{ ...num, width: COL.dbl - 8 }} type="number" value={d.hotel_dbl} onChange={e => setDay(i, { hotel_dbl: +e.target.value })} /></td>
-                <td style={{ padding: '4px 4px' }}><input style={{ ...num, width: COL.sgl - 8 }} type="number" value={d.hotel_sgl} onChange={e => setDay(i, { hotel_sgl: +e.target.value })} /></td>
-                <td style={{ padding: '4px 4px' }}><input style={{ ...num, width: COL.meals - 8 }} type="number" value={d.meals ?? 0} onChange={e => setDay(i, { meals: +e.target.value })} placeholder="0" /></td>
-                <td style={{ padding: '4px 4px' }}><input style={{ ...num, width: COL.entr - 8 }}  type="number" value={d.entrances ?? 0} onChange={e => setDay(i, { entrances: +e.target.value })} placeholder="0" /></td>
-                <td style={{ padding: '4px 4px' }}><input style={{ ...num, width: COL.guide - 8 }} type="number" value={d.guide_fee} onChange={e => setDay(i, { guide_fee: +e.target.value })} /></td>
-                <td style={{ padding: '4px 4px' }}><input style={{ ...num, width: COL.shab - 8 }}  type="number" value={d.shabbat_holiday} onChange={e => setDay(i, { shabbat_holiday: +e.target.value })} /></td>
-                <td style={{ padding: '4px 4px' }}><input style={{ ...num, width: COL.misc - 8 }}  type="number" value={d.misc} onChange={e => setDay(i, { misc: +e.target.value })} /></td>
-                <td style={{ padding: '4px 4px' }}>
+                <td style={{ padding: '3px 3px' }}><input style={{ ...inp, width: '100%' }} type="date" value={d.date} onChange={e => setDay(i, { date: e.target.value })} /></td>
+                <td style={{ padding: '3px 3px' }}><input style={{ ...inp, width: '100%' }} value={d.hotel} onChange={e => setDay(i, { hotel: e.target.value })} placeholder="Hotel name" /></td>
+                <td style={{ padding: '3px 3px' }}><input style={{ ...inp, width: '100%' }} value={d.board} onChange={e => setDay(i, { board: e.target.value })} /></td>
+                <td style={{ padding: '3px 3px' }}><input style={{ ...num, width: '100%' }} type="number" value={d.hotel_dbl} onChange={e => setDay(i, { hotel_dbl: +e.target.value })} /></td>
+                <td style={{ padding: '3px 3px' }}><input style={{ ...num, width: '100%' }} type="number" value={d.hotel_sgl} onChange={e => setDay(i, { hotel_sgl: +e.target.value })} /></td>
+                <td style={{ padding: '3px 3px' }}><input style={{ ...num, width: '100%' }} type="number" value={d.meals ?? 0} onChange={e => setDay(i, { meals: +e.target.value })} /></td>
+                <td style={{ padding: '3px 3px' }}><input style={{ ...num, width: '100%' }} type="number" value={d.entrances ?? 0} onChange={e => setDay(i, { entrances: +e.target.value })} /></td>
+                <td style={{ padding: '3px 3px' }}><input style={{ ...num, width: '100%' }} type="number" value={d.guide_fee} onChange={e => setDay(i, { guide_fee: +e.target.value })} /></td>
+                <td style={{ padding: '3px 3px' }}><input style={{ ...num, width: '100%' }} type="number" value={d.shabbat_holiday} onChange={e => setDay(i, { shabbat_holiday: +e.target.value })} /></td>
+                <td style={{ padding: '3px 3px' }}><input style={{ ...num, width: '100%' }} type="number" value={d.misc} onChange={e => setDay(i, { misc: +e.target.value })} /></td>
+                <td style={{ padding: '3px 3px' }}>
                   <select
                     value={d.staff ?? ((d as any).staff_full ? 'full' : 'none')}
                     onChange={e => setDay(i, { staff: e.target.value as 'none' | 'half' | 'full' })}
-                    style={{ ...inp, width: COL.staff - 8, background: d.staff === 'full' ? '#E6F1FB' : d.staff === 'half' ? '#FAEEDA' : '#fff', color: d.staff === 'full' ? '#185FA5' : d.staff === 'half' ? '#854F0B' : '#999', fontWeight: d.staff !== 'none' ? 600 : 400 }}>
+                    style={{ ...inp, width: '100%', background: d.staff === 'full' ? '#E6F1FB' : d.staff === 'half' ? '#FAEEDA' : '#fff', color: d.staff === 'full' ? '#185FA5' : d.staff === 'half' ? '#854F0B' : '#999', fontWeight: d.staff !== 'none' ? 600 : 400 }}>
                     <option value="none">—</option>
                     <option value="half">½ Staff</option>
                     <option value="full">Full Staff</option>
                   </select>
                 </td>
-                <td style={{ padding: '4px 4px', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '3px 3px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                   <button onClick={() => dupDay(i)} title="Duplicate" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aaa', padding: 2 }}><Copy size={12} /></button>
                   <button onClick={() => removeDay(i)} title="Remove" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ccc', padding: 2 }}><Trash2 size={12} /></button>
                 </td>
