@@ -13,6 +13,7 @@ import { logActivity } from '../lib/activity'
 import { getCachedSettings, loadSettings } from '../lib/companySettings'
 import FinancialPanel from '../components/FinancialPanel'
 import InvoicePanel from '../components/InvoicePanel'
+import GroupItineraryPanel from '../components/GroupItineraryPanel'
 import { formatMoney } from '../lib/currency'
 import { listPayments, sumPayments } from '../lib/payments'
 import { openWhatsApp, quoteMessage, voucherMessage, generalMessage } from '../lib/whatsapp'
@@ -350,6 +351,11 @@ export default function ClientCard() {
             {/* ACTIVITY TIMELINE */}
             <ActivityPanel clientId={id!} refreshKey={activityKey} />
           </div>
+        </div>
+
+        {/* ITINERARY — full width */}
+        <div style={{ marginTop: 16 }}>
+          <GroupItineraryPanel clientId={id!} ownerName={client.full_name} />
         </div>
 
         {/* INVOICES — full width */}

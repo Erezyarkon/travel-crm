@@ -114,6 +114,51 @@ export async function getItineraryForGroup(groupId: string): Promise<ClientItine
   return getClientItinerary(data.id)
 }
 
+export async function listItinerariesForClient(clientId: string): Promise<ClientItinerary[]> {
+  const { data } = await supabase.from('client_itineraries').select('*').eq('client_id', clientId).order('created_at', { ascending: false })
+  return (data as ClientItinerary[]) || []
+}
+
+/** All standalone client itineraries (no group), for a top-level "Itineraries" library page. */
+export async function listAllClientItineraries(): Promise<(ClientItinerary & { client_name?: string; group_name?: string })[]> {
+  const { data, error } = await supabase
+    .from('client_itineraries')
+    .select('*, clients(full_name), groups(name)')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return ((data as any[]) || []).map(r => ({ ...r, client_name: r.clients?.full_name, group_name: r.groups?.name }))
+}
+
+/** Clone a template into a private, editable copy for an individual client (no group). */
+export async function applyTemplateToClient(templateId: string, clientId: string): Promise<{ error: string | null; id?: string }> {
+  const tpl = await getTemplate(templateId)
+  if (!tpl) return { error: 'Template not found' }
+
+  const { data: it, error } = await supabase.from('client_itineraries').insert({
+    client_id: clientId,
+    source_template_id: templateId,
+    title: tpl.title,
+  }).select().single()
+  if (error) return { error: error.message }
+
+  if (tpl.days && tpl.days.length > 0) {
+    const rows = tpl.days.map(d => ({
+      itinerary_id: it.id, day_number: d.day_number, title: d.title, content: d.content,
+      depart_time: d.depart_time, return_time: d.return_time,
+    }))
+    const { error: daysErr } = await supabase.from('client_itinerary_days').insert(rows)
+    if (daysErr) return { error: daysErr.message }
+  }
+  return { error: null, id: it.id }
+}
+
+/** Start a blank itinerary for an individual client (no group). */
+export async function createBlankItineraryForClient(clientId: string, title: string): Promise<{ error: string | null; id?: string }> {
+  const { data, error } = await supabase.from('client_itineraries').insert({ client_id: clientId, title }).select().single()
+  if (error) return { error: error.message }
+  return { error: null, id: data.id }
+}
+
 /** Clone a template into a private, editable copy for a group (or standalone client). */
 export async function applyTemplateToGroup(templateId: string, groupId: string): Promise<{ error: string | null; id?: string }> {
   const tpl = await getTemplate(templateId)

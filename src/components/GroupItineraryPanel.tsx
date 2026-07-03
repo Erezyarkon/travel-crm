@@ -5,22 +5,27 @@ import {
 } from 'lucide-react'
 import {
   ClientItinerary, ItineraryDay, ItineraryTemplate,
-  getItineraryForGroup, listTemplates, applyTemplateToGroup, createBlankItinerary,
+  getItineraryForGroup, listItinerariesForClient, listTemplates,
+  applyTemplateToGroup, applyTemplateToClient,
+  createBlankItinerary, createBlankItineraryForClient,
   addDay, deleteDay, duplicateDay, updateDay, reorderDays, updateItineraryMeta, dayDate,
+  deleteClientItinerary,
 } from '../lib/itineraries'
 import { useToast } from '../lib/toast'
 import { getCachedSettings } from '../lib/companySettings'
 
 interface Props {
-  groupId: string
-  groupName: string
+  groupId?: string
+  clientId?: string
+  ownerName: string
 }
 
-export default function GroupItineraryPanel({ groupId, groupName }: Props) {
+export default function GroupItineraryPanel({ groupId, clientId, ownerName }: Props) {
   const toast = useToast()
   const [itinerary, setItinerary] = useState<ClientItinerary | null>(null)
   const [loading, setLoading] = useState(true)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  const [isReplacing, setIsReplacing] = useState(false)
   const [showPrint, setShowPrint] = useState(false)
   const [expanded, setExpanded] = useState(true)
   const dragIdx = useRef<number | null>(null)
@@ -28,25 +33,46 @@ export default function GroupItineraryPanel({ groupId, groupName }: Props) {
 
   async function load() {
     setLoading(true)
-    const it = await getItineraryForGroup(groupId)
+    const it = groupId
+      ? await getItineraryForGroup(groupId)
+      : clientId ? (await listItinerariesForClient(clientId))[0] || null : null
     setItinerary(it)
     setLoading(false)
   }
-  useEffect(() => { load() }, [groupId])
+  useEffect(() => { load() }, [groupId, clientId])
 
   async function handlePickTemplate(templateId: string) {
-    const { error } = await applyTemplateToGroup(templateId, groupId)
+    if (isReplacing && itinerary) {
+      const { error: delErr } = await deleteClientItinerary(itinerary.id)
+      if (delErr) { toast.error(delErr); return }
+    }
+    const { error } = groupId
+      ? await applyTemplateToGroup(templateId, groupId)
+      : await applyTemplateToClient(templateId, clientId!)
     if (error) { toast.error(error); return }
-    toast.success('Itinerary applied — now fully editable')
+    toast.success(isReplacing ? 'Itinerary replaced' : 'Itinerary applied — now fully editable')
     setShowTemplatePicker(false)
+    setIsReplacing(false)
     await load()
   }
 
   async function handleBlank() {
-    const { error } = await createBlankItinerary(groupId, `${groupName} — Itinerary`)
+    if (isReplacing && itinerary) {
+      const { error: delErr } = await deleteClientItinerary(itinerary.id)
+      if (delErr) { toast.error(delErr); return }
+    }
+    const { error } = groupId
+      ? await createBlankItinerary(groupId, `${ownerName} — Itinerary`)
+      : await createBlankItineraryForClient(clientId!, `${ownerName} — Itinerary`)
     if (error) { toast.error(error); return }
     setShowTemplatePicker(false)
+    setIsReplacing(false)
     await load()
+  }
+
+  function openReplacePicker() {
+    setIsReplacing(true)
+    setShowTemplatePicker(true)
   }
 
   async function handleAddDay() {
@@ -103,10 +129,16 @@ export default function GroupItineraryPanel({ groupId, groupName }: Props) {
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {itinerary && (
-            <button onClick={e => { e.stopPropagation(); setShowPrint(true) }}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#f0f4f8', color: '#1a2a3a', border: 'none', borderRadius: 7, padding: '6px 11px', cursor: 'pointer', fontSize: 11.5, fontWeight: 600 }}>
-              <Printer size={12} /> Print / Share
-            </button>
+            <>
+              <button onClick={e => { e.stopPropagation(); openReplacePicker() }}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#FAEEDA', color: '#854F0B', border: 'none', borderRadius: 7, padding: '6px 11px', cursor: 'pointer', fontSize: 11.5, fontWeight: 600 }}>
+                <Library size={12} /> Replace Itinerary
+              </button>
+              <button onClick={e => { e.stopPropagation(); setShowPrint(true) }}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#f0f4f8', color: '#1a2a3a', border: 'none', borderRadius: 7, padding: '6px 11px', cursor: 'pointer', fontSize: 11.5, fontWeight: 600 }}>
+                <Printer size={12} /> Print / Share
+              </button>
+            </>
           )}
           {expanded ? <ChevronUp size={16} color="#999" /> : <ChevronDown size={16} color="#999" />}
         </div>
@@ -214,8 +246,15 @@ export default function GroupItineraryPanel({ groupId, groupName }: Props) {
         </div>
       )}
 
-      {showTemplatePicker && <TemplatePickerModal onPick={handlePickTemplate} onBlank={handleBlank} onClose={() => setShowTemplatePicker(false)} />}
-      {showPrint && itinerary && <ItineraryPrintModal itinerary={itinerary} groupName={groupName} onClose={() => setShowPrint(false)} />}
+      {showTemplatePicker && (
+        <TemplatePickerModal
+          isReplacing={isReplacing}
+          onPick={handlePickTemplate}
+          onBlank={handleBlank}
+          onClose={() => { setShowTemplatePicker(false); setIsReplacing(false) }}
+        />
+      )}
+      {showPrint && itinerary && <ItineraryPrintModal itinerary={itinerary} ownerName={ownerName} onClose={() => setShowPrint(false)} />}
     </div>
   )
 }
@@ -223,7 +262,7 @@ export default function GroupItineraryPanel({ groupId, groupName }: Props) {
 // ============================================================
 // Template picker
 // ============================================================
-function TemplatePickerModal({ onPick, onBlank, onClose }: { onPick: (id: string) => void; onBlank: () => void; onClose: () => void }) {
+function TemplatePickerModal({ isReplacing, onPick, onBlank, onClose }: { isReplacing: boolean; onPick: (id: string) => void; onBlank: () => void; onClose: () => void }) {
   const [templates, setTemplates] = useState<ItineraryTemplate[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -231,13 +270,28 @@ function TemplatePickerModal({ onPick, onBlank, onClose }: { onPick: (id: string
     listTemplates().then(t => { setTemplates(t); setLoading(false) })
   }, [])
 
+  function confirmPick(id: string) {
+    if (isReplacing && !window.confirm('Replace the current itinerary with this one? The existing days and any edits will be permanently removed.')) return
+    onPick(id)
+  }
+
+  function confirmBlank() {
+    if (isReplacing && !window.confirm('Replace the current itinerary with a blank one? The existing days and any edits will be permanently removed.')) return
+    onBlank()
+  }
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
       <div style={{ background: '#fff', borderRadius: 14, width: 720, maxWidth: '92vw', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '16px 20px', borderBottom: '0.5px solid #eee', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 7 }}><Library size={16} color="#534AB7" /> Itinerary Library</div>
+          <div style={{ fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 7 }}><Library size={16} color="#534AB7" /> {isReplacing ? 'Replace Itinerary' : 'Itinerary Library'}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aaa' }}><X size={18} /></button>
         </div>
+        {isReplacing && (
+          <div style={{ background: '#FAEEDA', color: '#854F0B', fontSize: 12, padding: '9px 20px', borderBottom: '0.5px solid #f0ddb8' }}>
+            ⚠️ Choosing a template here will permanently delete the current itinerary and its edits.
+          </div>
+        )}
         <div style={{ padding: 16, overflowY: 'auto', flex: 1 }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: 30, color: '#aaa', fontSize: 13 }}>Loading…</div>
@@ -246,7 +300,7 @@ function TemplatePickerModal({ onPick, onBlank, onClose }: { onPick: (id: string
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {templates.map(t => (
-                <div key={t.id} onClick={() => onPick(t.id)}
+                <div key={t.id} onClick={() => confirmPick(t.id)}
                   style={{ border: '1px solid #eee', borderRadius: 10, padding: 14, cursor: 'pointer', transition: 'border-color 0.15s' }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = '#534AB7')}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = '#eee')}>
@@ -269,8 +323,8 @@ function TemplatePickerModal({ onPick, onBlank, onClose }: { onPick: (id: string
           )}
         </div>
         <div style={{ padding: '12px 20px', borderTop: '0.5px solid #eee' }}>
-          <button onClick={onBlank} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', color: '#555', border: '0.5px solid #d0d0d0', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontWeight: 500, fontSize: 12.5 }}>
-            <Plus size={14} /> Or start from a blank itinerary
+          <button onClick={confirmBlank} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', color: '#555', border: '0.5px solid #d0d0d0', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontWeight: 500, fontSize: 12.5 }}>
+            <Plus size={14} /> {isReplacing ? 'Or replace with a blank itinerary' : 'Or start from a blank itinerary'}
           </button>
         </div>
       </div>
@@ -281,7 +335,7 @@ function TemplatePickerModal({ onPick, onBlank, onClose }: { onPick: (id: string
 // ============================================================
 // Print / share modal
 // ============================================================
-function ItineraryPrintModal({ itinerary, groupName, onClose }: { itinerary: ClientItinerary; groupName: string; onClose: () => void }) {
+function ItineraryPrintModal({ itinerary, ownerName, onClose }: { itinerary: ClientItinerary; ownerName: string; onClose: () => void }) {
   const company = getCachedSettings()
   const [showPrices, setShowPrices] = useState(false) // itineraries don't carry prices themselves, but kept for future per-day cost rows
 
@@ -302,7 +356,7 @@ function ItineraryPrintModal({ itinerary, groupName, onClose }: { itinerary: Cli
         <div style={{ direction: 'ltr', padding: '36px 44px', fontFamily: 'Georgia, serif' }}>
           <div style={{ textAlign: 'center', marginBottom: 26, borderBottom: `2px solid ${company.company_name ? '#1a2a3a' : '#1a2a3a'}`, paddingBottom: 16 }}>
             <div style={{ fontSize: 22, fontWeight: 700, color: '#1a2a3a', letterSpacing: 0.5 }}>{itinerary.title}</div>
-            <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{groupName} · {company.company_name}</div>
+            <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{ownerName} · {company.company_name}</div>
           </div>
           {(itinerary.days || []).map(day => {
             const date = dayDate(itinerary.start_date, day.day_number)
