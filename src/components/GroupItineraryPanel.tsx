@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import {
   Map, Plus, Trash2, Copy, GripVertical, ChevronDown, ChevronUp, X,
-  Clock, Library, Sparkles, Printer,
+  Clock, Library, Sparkles, Printer, DollarSign, ChevronRight,
 } from 'lucide-react'
 import {
   ClientItinerary, ItineraryDay, ItineraryTemplate,
@@ -10,7 +10,10 @@ import {
   createBlankItinerary, createBlankItineraryForClient,
   addDay, deleteDay, duplicateDay, updateDay, reorderDays, updateItineraryMeta, dayDate,
   deleteClientItinerary,
+  DayCost, CostType, COST_TYPE_META,
+  getDayCosts, addDayCost, updateDayCost, deleteDayCost, calcCostSubtotal,
 } from '../lib/itineraries'
+import { exportItineraryToWord } from '../lib/exportItinerary'
 import { useToast } from '../lib/toast'
 import { getCachedSettings } from '../lib/companySettings'
 
@@ -18,9 +21,10 @@ interface Props {
   groupId?: string
   clientId?: string
   ownerName: string
+  pax?: number
 }
 
-export default function GroupItineraryPanel({ groupId, clientId, ownerName }: Props) {
+export default function GroupItineraryPanel({ groupId, clientId, ownerName, pax = 1 }: Props) {
   const toast = useToast()
   const [itinerary, setItinerary] = useState<ClientItinerary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -232,6 +236,8 @@ export default function GroupItineraryPanel({ groupId, clientId, ownerName }: Pr
                           </button>
                         </div>
                       </div>
+                      {/* Per-day cost rows — internal only */}
+                      <DayCostsPanel dayId={day.id} pax={pax} />
                     </div>
                   )
                 })}
@@ -255,6 +261,124 @@ export default function GroupItineraryPanel({ groupId, clientId, ownerName }: Pr
         />
       )}
       {showPrint && itinerary && <ItineraryPrintModal itinerary={itinerary} ownerName={ownerName} onClose={() => setShowPrint(false)} />}
+    </div>
+  )
+}
+
+// ============================================================
+// Per-day cost rows panel (internal only)
+// ============================================================
+function DayCostsPanel({ dayId, pax }: { dayId: string; pax: number }) {
+  const toast = useToast()
+  const [costs, setCosts] = useState<DayCost[]>([])
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  async function load() {
+    setLoading(true)
+    const c = await getDayCosts(dayId)
+    setCosts(c)
+    setLoading(false)
+  }
+
+  useEffect(() => { if (open) load() }, [open, dayId])
+
+  async function handleAdd(type: CostType) {
+    const { error } = await addDayCost(dayId, type)
+    if (error) { toast.error(error); return }
+    await load()
+  }
+
+  async function handleDelete(id: string) {
+    await deleteDayCost(id)
+    await load()
+  }
+
+  async function handleUpdate(id: string, patch: Partial<DayCost>) {
+    await updateDayCost(id, patch)
+    await load()
+  }
+
+  const subtotal = calcCostSubtotal(costs)
+  const total = subtotal * pax
+
+  return (
+    <div style={{ marginTop: 8, borderTop: '0.5px solid #f0f0f0', paddingTop: 8 }}>
+      <button onClick={() => setOpen(o => !o)}
+        style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', fontSize: 11.5, color: costs.length > 0 ? '#185FA5' : '#bbb', padding: '2px 0', fontWeight: costs.length > 0 ? 600 : 400 }}>
+        <DollarSign size={12} />
+        {costs.length > 0
+          ? `Costs: $${subtotal.toFixed(0)}/pp · $${total.toFixed(0)} total (${pax} pax)`
+          : 'Add costs (internal)'}
+        {open ? <ChevronUp size={11} /> : <ChevronRight size={11} />}
+      </button>
+
+      {open && (
+        <div style={{ marginTop: 8, background: '#fff8f0', border: '0.5px solid #f0ddb8', borderRadius: 8, padding: 10 }}>
+          <div style={{ fontSize: 10, color: '#854F0B', fontWeight: 700, letterSpacing: 0.4, marginBottom: 8, textTransform: 'uppercase' }}>
+            🔒 Internal costs — not shown to client
+          </div>
+
+          {loading ? (
+            <div style={{ fontSize: 12, color: '#aaa', padding: 4 }}>Loading…</div>
+          ) : (
+            <>
+              {costs.map(c => {
+                const meta = COST_TYPE_META[c.type]
+                return (
+                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+                    <select value={c.type} onChange={e => handleUpdate(c.id, { type: e.target.value as CostType })}
+                      style={{ fontSize: 11, border: '0.5px solid #e5e5e5', borderRadius: 5, padding: '3px 5px', background: meta.bg, color: meta.color, fontWeight: 600, outline: 'none' }}>
+                      {(Object.keys(COST_TYPE_META) as CostType[]).map(t => (
+                        <option key={t} value={t}>{COST_TYPE_META[t].emoji} {COST_TYPE_META[t].label}</option>
+                      ))}
+                    </select>
+                    <input defaultValue={c.description} onBlur={e => handleUpdate(c.id, { description: e.target.value })}
+                      placeholder="Description"
+                      style={{ flex: 1, minWidth: 100, fontSize: 11.5, border: '0.5px solid #e5e5e5', borderRadius: 5, padding: '3px 7px', outline: 'none' }} />
+                    <span style={{ fontSize: 10, color: '#888' }}>$</span>
+                    <input type="number" defaultValue={c.unit_cost} onBlur={e => handleUpdate(c.id, { unit_cost: parseFloat(e.target.value) || 0 })}
+                      placeholder="0"
+                      style={{ width: 60, fontSize: 11.5, border: '0.5px solid #e5e5e5', borderRadius: 5, padding: '3px 5px', outline: 'none', textAlign: 'right' }} />
+                    <span style={{ fontSize: 10, color: '#888' }}>/pp ×</span>
+                    <input type="number" defaultValue={c.quantity} onBlur={e => handleUpdate(c.id, { quantity: parseInt(e.target.value) || 1 })}
+                      min={1}
+                      style={{ width: 36, fontSize: 11.5, border: '0.5px solid #e5e5e5', borderRadius: 5, padding: '3px 4px', outline: 'none', textAlign: 'center' }} />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#1a2a3a', minWidth: 52, textAlign: 'right' }}>
+                      = ${(c.unit_cost * c.quantity).toFixed(0)}
+                    </span>
+                    <button onClick={() => handleDelete(c.id)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e0a0a0', padding: 2 }}>
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                )
+              })}
+
+              {/* Totals */}
+              {costs.length > 0 && (
+                <div style={{ borderTop: '0.5px solid #e5c98c', marginTop: 6, paddingTop: 6, display: 'flex', gap: 16, fontSize: 12 }}>
+                  <span style={{ color: '#854F0B' }}>Per person: <strong>${subtotal.toFixed(0)}</strong></span>
+                  <span style={{ color: '#1a2a3a' }}>Total ({pax} pax): <strong>${total.toFixed(0)}</strong></span>
+                </div>
+              )}
+
+              {/* Add buttons */}
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 8 }}>
+                {(Object.keys(COST_TYPE_META) as CostType[]).map(t => {
+                  const meta = COST_TYPE_META[t]
+                  return (
+                    <button key={t} onClick={() => handleAdd(t)}
+                      style={{ fontSize: 10.5, background: meta.bg, color: meta.color, border: 'none', borderRadius: 5, padding: '3px 8px', cursor: 'pointer', fontWeight: 600 }}>
+                      + {meta.emoji} {meta.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -337,7 +461,17 @@ function TemplatePickerModal({ isReplacing, onPick, onBlank, onClose }: { isRepl
 // ============================================================
 function ItineraryPrintModal({ itinerary, ownerName, onClose }: { itinerary: ClientItinerary; ownerName: string; onClose: () => void }) {
   const company = getCachedSettings()
-  const [showPrices, setShowPrices] = useState(false) // itineraries don't carry prices themselves, but kept for future per-day cost rows
+  const [showPrices, setShowPrices] = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  async function handleExportWord() {
+    setExporting(true)
+    try {
+      await exportItineraryToWord(itinerary, ownerName, company)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '30px 16px' }}>
@@ -348,7 +482,11 @@ function ItineraryPrintModal({ itinerary, ownerName, onClose }: { itinerary: Cli
             Include prices
           </label>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => window.print()} style={{ padding: '8px 16px', background: '#f5c842', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>🖨 Print / Save PDF</button>
+            <button onClick={handleExportWord} disabled={exporting}
+              style={{ padding: '8px 16px', background: '#185FA5', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: exporting ? 0.7 : 1 }}>
+              {exporting ? '⏳ Generating…' : '📄 Export Word (.docx)'}
+            </button>
+            <button onClick={() => window.print()} style={{ padding: '8px 16px', background: '#f5c842', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>🖨 Print / PDF</button>
             <button onClick={onClose} style={{ padding: '8px 14px', background: '#fff', border: '0.5px solid #ccc', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>✕ Close</button>
           </div>
         </div>

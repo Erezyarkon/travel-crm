@@ -266,3 +266,64 @@ export function dayDate(startDate: string | null, dayNumber: number): string | n
   d.setDate(d.getDate() + (dayNumber - 1))
   return d.toISOString().slice(0, 10)
 }
+
+// ============================================================
+// Per-day cost rows (internal only — never shown to client)
+// ============================================================
+export type CostType = 'hotel' | 'transport' | 'entrance' | 'meal' | 'guide' | 'other'
+
+export interface DayCost {
+  id: string
+  day_id: string
+  type: CostType
+  description: string
+  unit_cost: number
+  quantity: number
+  notes: string | null
+  sort_order: number
+}
+
+export const COST_TYPE_META: Record<CostType, { label: string; emoji: string; color: string; bg: string }> = {
+  hotel:     { label: 'Hotel',     emoji: '🏨', color: '#185FA5', bg: '#E6F1FB' },
+  transport: { label: 'Transport', emoji: '🚌', color: '#854F0B', bg: '#FAEEDA' },
+  entrance:  { label: 'Entrance',  emoji: '🎟', color: '#534AB7', bg: '#EEEDFE' },
+  meal:      { label: 'Meal',      emoji: '🍽',  color: '#0F6E56', bg: '#E1F5EE' },
+  guide:     { label: 'Guide',     emoji: '🧭', color: '#3B6D11', bg: '#EAF3DE' },
+  other:     { label: 'Other',     emoji: '📋', color: '#888',    bg: '#f5f5f5' },
+}
+
+export async function getDayCosts(dayId: string): Promise<DayCost[]> {
+  const { data } = await supabase
+    .from('itinerary_day_costs')
+    .select('*')
+    .eq('day_id', dayId)
+    .order('sort_order')
+  return (data as DayCost[]) || []
+}
+
+export async function addDayCost(dayId: string, type: CostType = 'other'): Promise<{ error: string | null; id?: string }> {
+  const { data: existing } = await supabase.from('itinerary_day_costs').select('sort_order').eq('day_id', dayId).order('sort_order', { ascending: false }).limit(1)
+  const nextOrder = existing && existing.length > 0 ? (existing[0].sort_order + 1) : 0
+  const { data, error } = await supabase.from('itinerary_day_costs').insert({
+    day_id: dayId, type, description: '', unit_cost: 0, quantity: 1, sort_order: nextOrder
+  }).select().single()
+  return { error: error ? error.message : null, id: data?.id }
+}
+
+export async function updateDayCost(id: string, patch: Partial<Omit<DayCost, 'id' | 'day_id'>>): Promise<{ error: string | null }> {
+  const { error } = await supabase.from('itinerary_day_costs').update(patch).eq('id', id)
+  return { error: error ? error.message : null }
+}
+
+export async function deleteDayCost(id: string): Promise<{ error: string | null }> {
+  const { error } = await supabase.from('itinerary_day_costs').delete().eq('id', id)
+  return { error: error ? error.message : null }
+}
+
+export function calcDayTotal(costs: DayCost[], pax: number): number {
+  return costs.reduce((sum, c) => sum + (c.unit_cost * c.quantity), 0) * pax
+}
+
+export function calcCostSubtotal(costs: DayCost[]): number {
+  return costs.reduce((sum, c) => sum + (c.unit_cost * c.quantity), 0)
+}

@@ -169,7 +169,7 @@ export default function GroupCard() {
       <GroupRoomingPanel group={group} onSaved={(rooms, guideDriver) => setGroup(g => g ? { ...g, rooming: rooms, guide_driver: guideDriver } : g)} />
 
       {/* Itinerary */}
-      <GroupItineraryPanel groupId={group.id} ownerName={group.name} />
+      <GroupItineraryPanel groupId={group.id} ownerName={group.name} pax={group.pax_count || 1} />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {/* Members */}

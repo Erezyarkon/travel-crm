@@ -7,6 +7,22 @@ import { updateGroup } from '../lib/groups'
 import { formatMoney } from '../lib/currency'
 import { useToast } from '../lib/toast'
 
+// Column widths — shared between header and rows so they never drift
+const COL = {
+  date:    130,
+  hotel:   140,
+  board:   46,
+  dbl:     64,
+  sgl:     56,
+  meals:   60,
+  entr:    60,
+  guide:   60,
+  shab:    64,
+  misc:    54,
+  staff:   80,
+  actions: 44,
+}
+
 export default function GroupPricingPanel({ group, onSaved }: { group: any; onSaved?: (price: number, single: number) => void }) {
   const toast = useToast()
   const cur = group.currency || 'USD'
@@ -21,9 +37,27 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
 
   function addDay() {
     const last = m.days[m.days.length - 1]
-    const nextDate = last?.date ? new Date(new Date(last.date).getTime() + 86400000).toISOString().slice(0, 10) : (group.start_date || '')
-    setM(p => ({ ...p, days: [...p.days, { date: nextDate, hotel: last?.hotel || '', board: m.days[0]?.board || group.meal_plan || 'HB', hotel_dbl: last?.hotel_dbl || 0, hotel_sgl: last?.hotel_sgl || 0, guide_fee: m.guide_fee_per_day, shabbat_holiday: 0, misc: 0, staff_full: false }] }))
+    const nextDate = last?.date
+      ? new Date(new Date(last.date).getTime() + 86400000).toISOString().slice(0, 10)
+      : (group.start_date || '')
+    setM(p => ({
+      ...p,
+      days: [...p.days, {
+        date: nextDate,
+        hotel: last?.hotel || '',
+        board: last?.board || group.meal_plan || 'HB',
+        hotel_dbl: last?.hotel_dbl || 0,
+        hotel_sgl: last?.hotel_sgl || 0,
+        meals: last?.meals || 0,
+        entrances: last?.entrances || 0,
+        guide_fee: m.guide_fee_per_day,
+        shabbat_holiday: 0,
+        misc: 0,
+        staff: 'none',
+      }],
+    }))
   }
+
   function dupDay(i: number) {
     const d = m.days[i]
     const nextDate = d.date ? new Date(new Date(d.date).getTime() + 86400000).toISOString().slice(0, 10) : ''
@@ -38,7 +72,6 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
 
   async function save() {
     setBusy(true)
-    // Headline price = the largest-tier (best) price per person, single = its single room
     const best = totals.tierResults[totals.tierResults.length - 1]
     const pricePerPerson = best ? Math.round(best.totalPrice) : null
     const single = best ? Math.round(singleRoomPrice(m, best) - best.totalPrice) : null
@@ -53,9 +86,14 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
     if (pricePerPerson != null && single != null) onSaved?.(pricePerPerson, single)
   }
 
-  const inp: React.CSSProperties = { width: '100%', padding: '5px 7px', border: '0.5px solid #d8d8d8', borderRadius: 6, fontSize: 12, outline: 'none', boxSizing: 'border-box', background: '#fff' }
-  const cellNum: React.CSSProperties = { ...inp, textAlign: 'right' }
-  const th: React.CSSProperties = { fontSize: 9.5, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: 0.3, padding: '6px 5px', textAlign: 'left', whiteSpace: 'nowrap' }
+  const inp: React.CSSProperties = { width: '100%', padding: '5px 7px', border: '0.5px solid #d8d8d8', borderRadius: 6, fontSize: 11.5, outline: 'none', boxSizing: 'border-box', background: '#fff' }
+  const num: React.CSSProperties = { ...inp, textAlign: 'right' }
+
+  const TH = ({ label, w, right }: { label: string; w: number; right?: boolean }) => (
+    <th style={{ fontSize: 9.5, fontWeight: 700, color: '#666', textTransform: 'uppercase', letterSpacing: 0.3, padding: '7px 4px', textAlign: right ? 'right' : 'left', whiteSpace: 'nowrap', width: w, minWidth: w }}>
+      {label}
+    </th>
+  )
 
   return (
     <div style={{ background: '#fff', border: '0.5px solid #eee', borderRadius: 12, padding: 18, marginBottom: 16 }}>
@@ -70,67 +108,97 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
 
       {/* Global settings */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 14, background: '#fafafa', padding: 10, borderRadius: 8 }}>
-        <Field label="Mini /day"><input style={cellNum} type="number" value={m.vehicle.mini} onChange={e => setVehicle('mini', +e.target.value)} /></Field>
-        <Field label="Midi /day"><input style={cellNum} type="number" value={m.vehicle.midi} onChange={e => setVehicle('midi', +e.target.value)} /></Field>
-        <Field label="Bus /day"><input style={cellNum} type="number" value={m.vehicle.bus} onChange={e => setVehicle('bus', +e.target.value)} /></Field>
-        <Field label="Guide /day"><input style={cellNum} type="number" value={m.guide_fee_per_day} onChange={e => set('guide_fee_per_day', +e.target.value)} /></Field>
-        <Field label="VAT %"><input style={cellNum} type="number" value={m.vat_percent} onChange={e => set('vat_percent', +e.target.value)} /></Field>
-        <Field label="Margin %"><input style={cellNum} type="number" value={m.margin_percent} onChange={e => set('margin_percent', +e.target.value)} /></Field>
+        <Field label="Mini /day"><input style={num} type="number" value={m.vehicle.mini} onChange={e => setVehicle('mini', +e.target.value)} /></Field>
+        <Field label="Midi /day"><input style={num} type="number" value={m.vehicle.midi} onChange={e => setVehicle('midi', +e.target.value)} /></Field>
+        <Field label="Bus /day"><input style={num} type="number" value={m.vehicle.bus} onChange={e => setVehicle('bus', +e.target.value)} /></Field>
+        <Field label="Guide /day"><input style={num} type="number" value={m.guide_fee_per_day} onChange={e => set('guide_fee_per_day', +e.target.value)} /></Field>
+        <Field label="VAT %"><input style={num} type="number" value={m.vat_percent} onChange={e => set('vat_percent', +e.target.value)} /></Field>
+        <Field label="Margin %"><input style={num} type="number" value={m.margin_percent} onChange={e => set('margin_percent', +e.target.value)} /></Field>
       </div>
 
       {/* Day-by-day table */}
       <div style={{ overflowX: 'auto', marginBottom: 6 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ borderBottom: '0.5px solid #eee' }}>
-              <th style={th}>Date</th>
-              <th style={th}>Hotel</th>
-              <th style={{ ...th, width: 46 }}>Board</th>
-              <th style={{ ...th, textAlign: 'right' }}>Dbl/pp</th>
-              <th style={{ ...th, textAlign: 'right' }}>Sgl</th>
-              <th style={{ ...th, textAlign: 'right' }}>Guide</th>
-              <th style={{ ...th, textAlign: 'right' }}>Shab/Hol</th>
-              <th style={{ ...th, textAlign: 'right' }}>Misc</th>
-              <th style={{ ...th, textAlign: 'center', width: 40 }}>Full</th>
-              <th style={{ ...th, width: 50 }}></th>
+            <tr style={{ borderBottom: '1.5px solid #e0e0e0', background: '#f8f8fc' }}>
+              <TH label="Date"      w={COL.date} />
+              <TH label="Hotel"     w={COL.hotel} />
+              <TH label="Board"     w={COL.board} />
+              <TH label="Dbl/pp"    w={COL.dbl}   right />
+              <TH label="Sgl"       w={COL.sgl}   right />
+              <TH label="Meals/pp"  w={COL.meals} right />
+              <TH label="Entr/pp"   w={COL.entr}  right />
+              <TH label="Guide"     w={COL.guide}  right />
+              <TH label="Shab/Hol" w={COL.shab}   right />
+              <TH label="Misc"      w={COL.misc}   right />
+              <TH label="Staff"     w={COL.staff} />
+              <TH label=""          w={COL.actions} />
             </tr>
           </thead>
           <tbody>
             {m.days.length === 0 ? (
-              <tr><td colSpan={10} style={{ padding: 16, textAlign: 'center', color: '#bbb', fontSize: 12 }}>No days yet. Click "Add Day" to build the itinerary costs.</td></tr>
+              <tr><td colSpan={12} style={{ padding: 18, textAlign: 'center', color: '#bbb', fontSize: 12 }}>No days yet — click "Add Day" below.</td></tr>
             ) : m.days.map((d, i) => (
-              <tr key={i} style={{ borderBottom: '0.5px solid #f6f6f6' }}>
-                <td style={{ padding: '4px 5px' }}><input style={{ ...inp, width: 130 }} type="date" value={d.date} onChange={e => setDay(i, { date: e.target.value })} /></td>
-                <td style={{ padding: '4px 5px' }}><input style={{ ...inp, minWidth: 130 }} value={d.hotel} onChange={e => setDay(i, { hotel: e.target.value })} placeholder="Hotel name" /></td>
-                <td style={{ padding: '4px 5px' }}><input style={{ ...inp, width: 44 }} value={d.board} onChange={e => setDay(i, { board: e.target.value })} /></td>
-                <td style={{ padding: '4px 5px' }}><input style={{ ...cellNum, width: 64 }} type="number" value={d.hotel_dbl} onChange={e => setDay(i, { hotel_dbl: +e.target.value })} /></td>
-                <td style={{ padding: '4px 5px' }}><input style={{ ...cellNum, width: 56 }} type="number" value={d.hotel_sgl} onChange={e => setDay(i, { hotel_sgl: +e.target.value })} /></td>
-                <td style={{ padding: '4px 5px' }}><input style={{ ...cellNum, width: 56 }} type="number" value={d.guide_fee} onChange={e => setDay(i, { guide_fee: +e.target.value })} /></td>
-                <td style={{ padding: '4px 5px' }}><input style={{ ...cellNum, width: 60 }} type="number" value={d.shabbat_holiday} onChange={e => setDay(i, { shabbat_holiday: +e.target.value })} /></td>
-                <td style={{ padding: '4px 5px' }}><input style={{ ...cellNum, width: 56 }} type="number" value={d.misc} onChange={e => setDay(i, { misc: +e.target.value })} /></td>
-                <td style={{ padding: '4px 5px', textAlign: 'center' }}><input type="checkbox" checked={d.staff_full} onChange={e => setDay(i, { staff_full: e.target.checked })} title="Staff overnight at full rate" /></td>
-                <td style={{ padding: '4px 5px', whiteSpace: 'nowrap' }}>
-                  <button onClick={() => dupDay(i)} title="Duplicate day" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aaa', padding: 2 }}><Copy size={12} /></button>
-                  <button onClick={() => removeDay(i)} title="Remove day" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ccc', padding: 2 }}><Trash2 size={12} /></button>
+              <tr key={i} style={{ borderBottom: '0.5px solid #f3f3f3' }}>
+                <td style={{ padding: '4px 4px' }}><input style={{ ...inp, width: COL.date - 8 }} type="date" value={d.date} onChange={e => setDay(i, { date: e.target.value })} /></td>
+                <td style={{ padding: '4px 4px' }}><input style={{ ...inp, width: COL.hotel - 8 }} value={d.hotel} onChange={e => setDay(i, { hotel: e.target.value })} placeholder="Hotel name" /></td>
+                <td style={{ padding: '4px 4px' }}><input style={{ ...inp, width: COL.board - 4 }} value={d.board} onChange={e => setDay(i, { board: e.target.value })} /></td>
+                <td style={{ padding: '4px 4px' }}><input style={{ ...num, width: COL.dbl - 8 }} type="number" value={d.hotel_dbl} onChange={e => setDay(i, { hotel_dbl: +e.target.value })} /></td>
+                <td style={{ padding: '4px 4px' }}><input style={{ ...num, width: COL.sgl - 8 }} type="number" value={d.hotel_sgl} onChange={e => setDay(i, { hotel_sgl: +e.target.value })} /></td>
+                <td style={{ padding: '4px 4px' }}><input style={{ ...num, width: COL.meals - 8 }} type="number" value={d.meals ?? 0} onChange={e => setDay(i, { meals: +e.target.value })} placeholder="0" /></td>
+                <td style={{ padding: '4px 4px' }}><input style={{ ...num, width: COL.entr - 8 }}  type="number" value={d.entrances ?? 0} onChange={e => setDay(i, { entrances: +e.target.value })} placeholder="0" /></td>
+                <td style={{ padding: '4px 4px' }}><input style={{ ...num, width: COL.guide - 8 }} type="number" value={d.guide_fee} onChange={e => setDay(i, { guide_fee: +e.target.value })} /></td>
+                <td style={{ padding: '4px 4px' }}><input style={{ ...num, width: COL.shab - 8 }}  type="number" value={d.shabbat_holiday} onChange={e => setDay(i, { shabbat_holiday: +e.target.value })} /></td>
+                <td style={{ padding: '4px 4px' }}><input style={{ ...num, width: COL.misc - 8 }}  type="number" value={d.misc} onChange={e => setDay(i, { misc: +e.target.value })} /></td>
+                <td style={{ padding: '4px 4px' }}>
+                  <select
+                    value={d.staff ?? ((d as any).staff_full ? 'full' : 'none')}
+                    onChange={e => setDay(i, { staff: e.target.value as 'none' | 'half' | 'full' })}
+                    style={{ ...inp, width: COL.staff - 8, background: d.staff === 'full' ? '#E6F1FB' : d.staff === 'half' ? '#FAEEDA' : '#fff', color: d.staff === 'full' ? '#185FA5' : d.staff === 'half' ? '#854F0B' : '#999', fontWeight: d.staff !== 'none' ? 600 : 400 }}>
+                    <option value="none">—</option>
+                    <option value="half">½ Staff</option>
+                    <option value="full">Full Staff</option>
+                  </select>
+                </td>
+                <td style={{ padding: '4px 4px', whiteSpace: 'nowrap' }}>
+                  <button onClick={() => dupDay(i)} title="Duplicate" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aaa', padding: 2 }}><Copy size={12} /></button>
+                  <button onClick={() => removeDay(i)} title="Remove" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ccc', padding: 2 }}><Trash2 size={12} /></button>
                 </td>
               </tr>
             ))}
           </tbody>
+
+          {/* Totals row */}
+          {m.days.length > 0 && (
+            <tfoot>
+              <tr style={{ borderTop: '1.5px solid #e0e0e0', background: '#f8f8fc' }}>
+                <td colSpan={3} style={{ padding: '6px 8px', fontSize: 10.5, fontWeight: 700, color: '#888' }}>TOTAL</td>
+                <td style={{ padding: '6px 4px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: '#1a2a3a' }}>{formatMoney(totals.totalHotelDbl, cur)}</td>
+                <td />
+                <td style={{ padding: '6px 4px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: '#0F6E56' }}>{formatMoney(totals.totalMeals, cur)}</td>
+                <td style={{ padding: '6px 4px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: '#534AB7' }}>{formatMoney(totals.totalEntrances, cur)}</td>
+                <td style={{ padding: '6px 4px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: '#854F0B' }}>{formatMoney(totals.totalGuideOvernight, cur)}</td>
+                <td colSpan={4} />
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
+
       <button onClick={addDay} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#EEEDFE', color: '#534AB7', border: '0.5px solid #B5AEE8', borderRadius: 20, padding: '5px 13px', cursor: 'pointer', fontSize: 12, fontWeight: 600, marginBottom: 16 }}>
         <Plus size={13} /> Add Day
       </button>
 
       {/* Cost summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16, fontSize: 12 }}>
-        <Summary label="Days" value={String(totals.numDays)} />
-        <Summary label="Guide + Staff + Shab" value={formatMoney(totals.totalGuideOvernight, cur)} />
-        <Summary label="Hotel /pp (double)" value={formatMoney(totals.totalHotelDbl, cur)} />
-        <Summary label="Misc total" value={formatMoney(totals.totalMisc, cur)} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 16, fontSize: 12 }}>
+        <Summary label="Days"           value={String(totals.numDays)} />
+        <Summary label="Hotel /pp"      value={formatMoney(totals.totalHotelDbl, cur)}       color="#1a2a3a" />
+        <Summary label="Meals /pp"      value={formatMoney(totals.totalMeals, cur)}           color="#0F6E56" />
+        <Summary label="Entrances /pp"  value={formatMoney(totals.totalEntrances, cur)}       color="#534AB7" />
+        <Summary label="Guide + Staff"  value={formatMoney(totals.totalGuideOvernight, cur)}  color="#854F0B" />
       </div>
 
-      {/* Tiers + FOC calculator */}
+      {/* Tiers + FOC */}
       <div style={{ background: '#FAFAFE', border: '0.5px solid #E5E3F5', borderRadius: 10, padding: 12, marginBottom: 12 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10, marginBottom: 10 }}>
           <div>
@@ -139,17 +207,17 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
           </div>
           <div>
             <label style={{ fontSize: 10.5, color: '#888', fontWeight: 500, display: 'block', marginBottom: 3 }}>Range span</label>
-            <input style={cellNum} type="number" value={m.tier_span} onChange={e => set('tier_span', Math.max(1, +e.target.value))} />
+            <input style={num} type="number" value={m.tier_span} onChange={e => set('tier_span', Math.max(1, +e.target.value))} />
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
           <div>
-            <label style={{ fontSize: 10.5, color: '#854F0B', fontWeight: 600, display: 'block', marginBottom: 3 }}>FOC – Hotel free (room free, only entrances+meals spread)</label>
-            <input style={cellNum} type="number" min={0} value={m.foc_hotel} onChange={e => set('foc_hotel', Math.max(0, +e.target.value))} />
+            <label style={{ fontSize: 10.5, color: '#854F0B', fontWeight: 600, display: 'block', marginBottom: 3 }}>FOC – Hotel free (room free, meals+entr spread)</label>
+            <input style={num} type="number" min={0} value={m.foc_hotel} onChange={e => set('foc_hotel', Math.max(0, +e.target.value))} />
           </div>
           <div>
-            <label style={{ fontSize: 10.5, color: '#534AB7', fontWeight: 600, display: 'block', marginBottom: 3 }}>FOC – Full free (hotel+entrances+meals spread)</label>
-            <input style={cellNum} type="number" min={0} value={m.foc_full} onChange={e => set('foc_full', Math.max(0, +e.target.value))} />
+            <label style={{ fontSize: 10.5, color: '#534AB7', fontWeight: 600, display: 'block', marginBottom: 3 }}>FOC – Full free (hotel+meals+entr spread)</label>
+            <input style={num} type="number" min={0} value={m.foc_full} onChange={e => set('foc_full', Math.max(0, +e.target.value))} />
           </div>
         </div>
         <div>
@@ -163,18 +231,16 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
           <thead>
             <tr style={{ background: '#1a2a3a' }}>
-              <th style={{ ...th, color: '#fff', padding: '8px 12px' }}>Group Size</th>
-              <th style={{ ...th, color: '#fff', textAlign: 'right', padding: '8px 12px' }}>Net Base /pp</th>
-              <th style={{ ...th, color: '#fff', textAlign: 'right', padding: '8px 12px' }}>FOC /pp</th>
-              <th style={{ ...th, color: '#fff', textAlign: 'right', padding: '8px 12px' }}>Price /pp (Double)</th>
-              <th style={{ ...th, color: '#fff', textAlign: 'right', padding: '8px 12px' }}>Single Room</th>
+              {[['Group Size','left'],['Net Base /pp','right'],['FOC /pp','right'],['Price /pp (Double)','right'],['Single Room','right']].map(([lbl,align]) => (
+                <th key={lbl} style={{ fontSize: 9.5, fontWeight: 600, color: '#fff', padding: '8px 12px', textAlign: align as any, letterSpacing: 0.3 }}>{lbl}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {totals.tierResults.length === 0 ? (
               <tr><td colSpan={5} style={{ padding: 14, textAlign: 'center', color: '#bbb', fontSize: 12 }}>Add days and pax tiers to see pricing.</td></tr>
             ) : totals.tierResults.map((t, i) => (
-              <tr key={i} style={{ borderBottom: '0.5px solid #f5f5f5' }}>
+              <tr key={i} style={{ borderBottom: '0.5px solid #f5f5f5', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
                 <td style={{ padding: '9px 12px', fontSize: 13, fontWeight: 600 }}>{t.pax}–{t.paxHigh} pax</td>
                 <td style={{ padding: '9px 12px', fontSize: 12.5, textAlign: 'right', color: '#888' }}>{formatMoney(t.totalNetBase, cur)}</td>
                 <td style={{ padding: '9px 12px', fontSize: 12, textAlign: 'right', color: t.focAlloc ? '#854F0B' : '#ccc' }}>{t.focAlloc ? formatMoney(t.focAlloc, cur) : '—'}</td>
@@ -186,7 +252,7 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
         </table>
       </div>
       <div style={{ fontSize: 10.5, color: '#aaa', marginTop: 8, lineHeight: 1.5 }}>
-        Price divided by the low bound minus FOC. FOC "hotel free" spreads only entrances+meals; FOC "full" spreads hotel+entrances+meals. Vehicle &amp; guide are never part of FOC. Staff overnight always includes VAT.
+        Price divided by the tier low bound minus FOC. FOC "hotel free" spreads only meals+entrances; FOC "full" spreads hotel+meals+entrances. Vehicle &amp; guide are never part of FOC. Staff overnight always includes VAT (½ or full rate).
       </div>
     </div>
   )
@@ -195,16 +261,29 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
 function normalize(p: any): PricingModel {
   if (!p || typeof p !== 'object') return { ...DEFAULT_PRICING, days: [] }
   return {
-    vehicle: { mini: p.vehicle?.mini ?? 450, midi: p.vehicle?.midi ?? 550, bus: p.vehicle?.bus ?? 600 },
-    guide_fee_per_day: p.guide_fee_per_day ?? 300,
-    vat_percent: p.vat_percent ?? 18,
-    margin_percent: p.margin_percent ?? 20,
-    tiers: Array.isArray(p.tiers) && p.tiers.length ? p.tiers : [14, 20, 25, 30, 35, 40],
-    tier_span: p.tier_span ?? 5,
-    foc_hotel: p.foc_hotel ?? 0,
-    foc_full: p.foc_full ?? 0,
-    tier_note: p.tier_note ?? '',
-    days: Array.isArray(p.days) ? p.days : [],
+    vehicle:            { mini: p.vehicle?.mini ?? 450, midi: p.vehicle?.midi ?? 550, bus: p.vehicle?.bus ?? 600 },
+    guide_fee_per_day:  p.guide_fee_per_day ?? 300,
+    vat_percent:        p.vat_percent ?? 18,
+    margin_percent:     p.margin_percent ?? 20,
+    tiers:              Array.isArray(p.tiers) && p.tiers.length ? p.tiers : [14, 20, 25, 30, 35, 40],
+    tier_span:          p.tier_span ?? 5,
+    foc_hotel:          p.foc_hotel ?? 0,
+    foc_full:           p.foc_full ?? 0,
+    tier_note:          p.tier_note ?? '',
+    days: Array.isArray(p.days) ? p.days.map((d: any) => ({
+      date:            d.date ?? '',
+      hotel:           d.hotel ?? '',
+      board:           d.board ?? 'HB',
+      hotel_dbl:       Number(d.hotel_dbl) || 0,
+      hotel_sgl:       Number(d.hotel_sgl) || 0,
+      meals:           Number(d.meals)     || 0,
+      entrances:       Number(d.entrances) || 0,
+      guide_fee:       Number(d.guide_fee) || 0,
+      shabbat_holiday: Number(d.shabbat_holiday) || 0,
+      misc:            Number(d.misc)      || 0,
+      // backward compat: old 'staff_full' boolean → new 'staff' enum
+      staff: d.staff ?? (d.staff_full ? 'full' : 'none'),
+    })) : [],
   }
 }
 
@@ -217,11 +296,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function Summary({ label, value }: { label: string; value: string }) {
+function Summary({ label, value, color = '#1a2a3a' }: { label: string; value: string; color?: string }) {
   return (
-    <div style={{ background: '#fafafa', borderRadius: 8, padding: '8px 12px' }}>
+    <div style={{ background: '#fafafa', borderRadius: 8, padding: '8px 12px', borderLeft: `3px solid ${color}20` }}>
       <div style={{ fontSize: 10, color: '#999' }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: '#1a2a3a', marginTop: 2 }}>{value}</div>
+      <div style={{ fontSize: 13, fontWeight: 700, color, marginTop: 2 }}>{value}</div>
     </div>
   )
 }
