@@ -3,6 +3,8 @@ import { LOGO_SRC } from '../lib/logo'
 import { getCachedSettings, loadSettings, CompanySettings } from '../lib/companySettings'
 import { formatMoney } from '../lib/currency'
 import { computePricing, singleRoomPrice, PricingModel } from '../lib/groupPricing'
+import { exportGroupQuoteToWord } from '../lib/exportGroupQuote'
+import { getItineraryForGroup } from '../lib/itineraries'
 
 const DEFAULT_INCLUDES = [
   'Meet & assist on arrival at Ben Gurion Airport by EYT representative',
@@ -47,7 +49,19 @@ function fmtDate(d: string) {
 
 export default function GroupQuoteModal({ group, onClose }: { group: any; onClose: () => void }) {
   const [company, setCompany] = useState<CompanySettings>(getCachedSettings())
+  const [exporting, setExporting] = useState(false)
+  const [itinerary, setItinerary] = useState<any>(null)
   useEffect(() => { loadSettings().then(setCompany) }, [])
+  useEffect(() => { getItineraryForGroup(group.id).then(setItinerary) }, [group.id])
+
+  async function handleExportWord() {
+    setExporting(true)
+    try {
+      await exportGroupQuoteToWord({ group, itinerary, company })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const cur = group.currency || 'USD'
   const model: PricingModel | null = group.pricing && group.pricing.days ? group.pricing : null
@@ -72,6 +86,10 @@ export default function GroupQuoteModal({ group, onClose }: { group: any; onClos
     <div style={s.overlay} id="quote-print-root">
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, justifyContent: 'flex-end' }} className="no-print">
+          <button onClick={handleExportWord} disabled={exporting}
+            style={{ padding: '8px 18px', background: '#185FA5', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: exporting ? 'default' : 'pointer', opacity: exporting ? 0.7 : 1 }}>
+            {exporting ? '⏳ Generating…' : '📄 Export Word (.docx)'}
+          </button>
           <button onClick={() => window.print()} style={{ padding: '8px 18px', background: '#f5c842', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>🖨 Print / Save PDF</button>
           <button onClick={onClose} style={{ padding: '8px 16px', background: '#fff', border: '0.5px solid #ccc', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>✕ Close</button>
         </div>
