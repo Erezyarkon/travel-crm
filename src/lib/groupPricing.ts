@@ -10,6 +10,7 @@ export interface PricingDay {
   entrances: number       // entrance fees per person
   guide_fee: number       // guide fee for the day (usually flat 300)
   shabbat_holiday: number // surcharge for Shabbat/holiday
+  porterage: number       // porterage per person per day
   misc: number            // other misc costs
   staff: 'none' | 'half' | 'full'  // staff overnight rate
 }
@@ -59,6 +60,7 @@ export interface PricingTotals {
   totalHotelDbl: number
   totalMeals: number
   totalEntrances: number
+  totalPorterage: number
   totalMisc: number
   tierResults: TierResult[]
   numDays: number
@@ -84,6 +86,7 @@ export function computePricing(m: PricingModel): PricingTotals {
   let totalHotelDbl       = 0
   let totalMeals          = 0
   let totalEntrances      = 0
+  let totalPorterage      = 0
   let totalMisc           = 0
 
   for (const d of days) {
@@ -93,18 +96,19 @@ export function computePricing(m: PricingModel): PricingTotals {
     totalHotelDbl       += (Number(d.hotel_dbl)  || 0)
     totalMeals          += (Number(d.meals)       || 0)
     totalEntrances      += (Number(d.entrances)   || 0)
+    totalPorterage      += (Number(d.porterage)   || 0)
     totalMisc           += (Number(d.misc)        || 0)
     // legacy compat: old 'misc' used to include meals+entrances — skip if new fields present
   }
 
   // Per-person base = hotel + meals + entrances + misc
-  const netBaseCost = totalHotelDbl + totalMeals + totalEntrances + totalMisc
+  const netBaseCost = totalHotelDbl + totalMeals + totalEntrances + totalPorterage + totalMisc
   const span        = m.tier_span && m.tier_span > 0 ? m.tier_span : 5
   const focHotel    = Math.max(0, Number(m.foc_hotel) || 0)
   const focFull     = Math.max(0, Number(m.foc_full)  || 0)
 
-  // FOC hotel-free: only meals+entrances+misc spread (hotel room from hotel gratis)
-  const focMiscBase    = totalMeals + totalEntrances + totalMisc
+  // FOC hotel-free: only meals+entrances+porterage+misc spread
+  const focMiscBase    = totalMeals + totalEntrances + totalPorterage + totalMisc
   const focCostTotal   = (focMiscBase * focHotel) + (netBaseCost * focFull)
   const focTotalCount  = focHotel + focFull
 
@@ -121,7 +125,7 @@ export function computePricing(m: PricingModel): PricingTotals {
     return { pax, paxHigh, transportAlloc, staffAlloc, netBaseCost, focAlloc, totalNetBase, totalPrice }
   })
 
-  return { totalMini, totalMidi, totalBus, totalGuideOvernight, totalHotelDbl, totalMeals, totalEntrances, totalMisc, tierResults, numDays }
+  return { totalMini, totalMidi, totalBus, totalGuideOvernight, totalHotelDbl, totalMeals, totalEntrances, totalPorterage, totalMisc, tierResults, numDays }
 }
 
 export function singleRoomPrice(m: PricingModel, tier: TierResult): number {

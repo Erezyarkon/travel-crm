@@ -9,18 +9,19 @@ import { useToast } from '../lib/toast'
 
 // Column widths — shared between header and rows so they never drift
 const COL = {
-  date:    128,
-  hotel:   138,
-  board:   48,
-  dbl:     66,
-  sgl:     66,
-  meals:   64,
-  entr:    64,
-  guide:   62,
-  shab:    72,
-  misc:    56,
-  staff:   86,
-  actions: 44,
+  date:      128,
+  hotel:     138,
+  board:      48,
+  dbl:        62,
+  sgl:        62,
+  meals:      60,
+  entr:       60,
+  port:       56,
+  guide:      60,
+  shab:       68,
+  misc:       50,
+  staff:      86,
+  actions:    44,
 }
 
 export default function GroupPricingPanel({ group, onSaved, onDayFieldChange }: {
@@ -59,6 +60,7 @@ export default function GroupPricingPanel({ group, onSaved, onDayFieldChange }: 
         hotel_sgl: last?.hotel_sgl || 0,
         meals: last?.meals || 0,
         entrances: last?.entrances || 0,
+        porterage: last?.porterage || 0,
         guide_fee: m.guide_fee_per_day,
         shabbat_holiday: 0,
         misc: 0,
@@ -141,6 +143,7 @@ export default function GroupPricingPanel({ group, onSaved, onDayFieldChange }: 
             <col style={{ width: COL.sgl }} />
             <col style={{ width: COL.meals }} />
             <col style={{ width: COL.entr }} />
+            <col style={{ width: COL.port }} />
             <col style={{ width: COL.guide }} />
             <col style={{ width: COL.shab }} />
             <col style={{ width: COL.misc }} />
@@ -149,23 +152,24 @@ export default function GroupPricingPanel({ group, onSaved, onDayFieldChange }: 
           </colgroup>
           <thead>
             <tr style={{ borderBottom: '1.5px solid #e0e0e0', background: '#f8f8fc' }}>
-              <TH label="Date"      w={COL.date} />
-              <TH label="Hotel"     w={COL.hotel} />
-              <TH label="Board"     w={COL.board} />
-              <TH label="Dbl/pp"    w={COL.dbl}   right />
-              <TH label="Sgl"       w={COL.sgl}   right />
-              <TH label="Meals/pp"  w={COL.meals} right />
-              <TH label="Entr/pp"   w={COL.entr}  right />
-              <TH label="Guide"     w={COL.guide}  right />
-              <TH label="Shab/Hol" w={COL.shab}   right />
-              <TH label="Misc"      w={COL.misc}   right />
-              <TH label="Staff"     w={COL.staff} />
-              <TH label=""          w={COL.actions} />
+              <TH label="Date"       w={COL.date} />
+              <TH label="Hotel"      w={COL.hotel} />
+              <TH label="Board"      w={COL.board} />
+              <TH label="Dbl/pp"     w={COL.dbl}   right />
+              <TH label="Sgl"        w={COL.sgl}   right />
+              <TH label="Meals/pp"   w={COL.meals} right />
+              <TH label="Entr/pp"    w={COL.entr}  right />
+              <TH label="Port/pp"    w={COL.port}  right />
+              <TH label="Guide"      w={COL.guide} right />
+              <TH label="Shab/Hol"   w={COL.shab}  right />
+              <TH label="Misc"       w={COL.misc}  right />
+              <TH label="Staff"      w={COL.staff} />
+              <TH label=""           w={COL.actions} />
             </tr>
           </thead>
           <tbody>
             {m.days.length === 0 ? (
-              <tr><td colSpan={12} style={{ padding: 18, textAlign: 'center', color: '#bbb', fontSize: 12 }}>No days yet — click "Add Day" below.</td></tr>
+              <tr><td colSpan={13} style={{ padding: 18, textAlign: 'center', color: '#bbb', fontSize: 12 }}>No days yet — click "Add Day" below.</td></tr>
             ) : m.days.map((d, i) => (
               <tr key={i} style={{ borderBottom: '0.5px solid #f3f3f3' }}>
                 <td style={{ padding: '3px 3px' }}><input style={{ ...inp, width: '100%' }} type="date" value={d.date} onChange={e => setDay(i, { date: e.target.value })} /></td>
@@ -175,6 +179,7 @@ export default function GroupPricingPanel({ group, onSaved, onDayFieldChange }: 
                 <td style={{ padding: '3px 3px' }}><input style={{ ...num, width: '100%' }} type="number" value={d.hotel_sgl} onChange={e => setDay(i, { hotel_sgl: +e.target.value })} /></td>
                 <td style={{ padding: '3px 3px' }}><input style={{ ...num, width: '100%' }} type="number" value={d.meals ?? 0} onChange={e => setDay(i, { meals: +e.target.value })} /></td>
                 <td style={{ padding: '3px 3px' }}><input style={{ ...num, width: '100%' }} type="number" value={d.entrances ?? 0} onChange={e => setDay(i, { entrances: +e.target.value })} /></td>
+                <td style={{ padding: '3px 3px' }}><input style={{ ...num, width: '100%' }} type="number" value={d.porterage ?? 0} onChange={e => setDay(i, { porterage: +e.target.value })} /></td>
                 <td style={{ padding: '3px 3px' }}><input style={{ ...num, width: '100%' }} type="number" value={d.guide_fee} onChange={e => setDay(i, { guide_fee: +e.target.value })} /></td>
                 <td style={{ padding: '3px 3px' }}><input style={{ ...num, width: '100%' }} type="number" value={d.shabbat_holiday} onChange={e => setDay(i, { shabbat_holiday: +e.target.value })} /></td>
                 <td style={{ padding: '3px 3px' }}><input style={{ ...num, width: '100%' }} type="number" value={d.misc} onChange={e => setDay(i, { misc: +e.target.value })} /></td>
@@ -205,6 +210,7 @@ export default function GroupPricingPanel({ group, onSaved, onDayFieldChange }: 
                 <td />
                 <td style={{ padding: '6px 4px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: '#0F6E56' }}>{formatMoney(totals.totalMeals, cur)}</td>
                 <td style={{ padding: '6px 4px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: '#534AB7' }}>{formatMoney(totals.totalEntrances, cur)}</td>
+                <td style={{ padding: '6px 4px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: '#3B6D11' }}>{formatMoney(totals.totalPorterage, cur)}</td>
                 <td style={{ padding: '6px 4px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: '#854F0B' }}>{formatMoney(totals.totalGuideOvernight, cur)}</td>
                 <td colSpan={4} />
               </tr>
@@ -218,11 +224,12 @@ export default function GroupPricingPanel({ group, onSaved, onDayFieldChange }: 
       </button>
 
       {/* Cost summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 16, fontSize: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 16, fontSize: 12 }}>
         <Summary label="Days"           value={String(totals.numDays)} />
         <Summary label="Hotel /pp"      value={formatMoney(totals.totalHotelDbl, cur)}       color="#1a2a3a" />
         <Summary label="Meals /pp"      value={formatMoney(totals.totalMeals, cur)}           color="#0F6E56" />
         <Summary label="Entrances /pp"  value={formatMoney(totals.totalEntrances, cur)}       color="#534AB7" />
+        <Summary label="Porterage /pp"  value={formatMoney(totals.totalPorterage, cur)}       color="#3B6D11" />
         <Summary label="Guide + Staff"  value={formatMoney(totals.totalGuideOvernight, cur)}  color="#854F0B" />
       </div>
 
@@ -306,6 +313,7 @@ function normalize(p: any): PricingModel {
       hotel_sgl:       Number(d.hotel_sgl) || 0,
       meals:           Number(d.meals)     || 0,
       entrances:       Number(d.entrances) || 0,
+      porterage:       Number(d.porterage) || 0,
       guide_fee:       Number(d.guide_fee) || 0,
       shabbat_holiday: Number(d.shabbat_holiday) || 0,
       misc:            Number(d.misc)      || 0,

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Users2, Calendar, MapPin, Utensils, DollarSign, Trash2, ExternalLink, FileText, CalendarPlus } from 'lucide-react'
+import { ArrowLeft, Users2, Calendar, MapPin, Utensils, DollarSign, Trash2, ExternalLink, FileText, CalendarPlus, ChevronDown, ChevronUp } from 'lucide-react'
 import {
   Group, getGroup, updateGroup, deleteGroup, groupClients, groupBookings,
   GROUP_STAGES, GROUP_STAGE_ORDER, createBookingsFromGroup,
@@ -208,22 +208,34 @@ export default function GroupCard() {
       )}
 
       {/* Pricing calculator */}
-      <GroupPricingPanel
-        group={group}
-        onSaved={(price, single) => setGroup(g => g ? { ...g, price_per_person: price, single_supplement: single } : g)}
-        onDayFieldChange={handleDayFieldChange}
-      />
+      <CollapsiblePanel label="Pricing Calculator" badge={group.price_per_person ? `${group.currency || 'USD'} ${group.price_per_person}/pp` : undefined}>
+        <div style={{ padding: 0 }}>
+          <GroupPricingPanel
+            group={group}
+            onSaved={(price, single) => setGroup(g => g ? { ...g, price_per_person: price, single_supplement: single } : g)}
+            onDayFieldChange={handleDayFieldChange}
+          />
+        </div>
+      </CollapsiblePanel>
 
       {/* Rooming list */}
-      <GroupRoomingPanel group={group} onSaved={(rooms, guideDriver) => setGroup(g => g ? { ...g, rooming: rooms, guide_driver: guideDriver } : g)} />
+      <CollapsiblePanel label="Rooming List" defaultOpen={false}>
+        <div style={{ padding: 0 }}>
+          <GroupRoomingPanel group={group} onSaved={(rooms, guideDriver) => setGroup(g => g ? { ...g, rooming: rooms, guide_driver: guideDriver } : g)} />
+        </div>
+      </CollapsiblePanel>
 
       {/* Itinerary */}
-      <GroupItineraryPanel
-        groupId={group.id}
-        ownerName={group.name}
-        pax={group.pax_count || 1}
-        onCostsChange={handleCostsChange}
-      />
+      <CollapsiblePanel label="Itinerary" defaultOpen={false}>
+        <div style={{ padding: 0 }}>
+          <GroupItineraryPanel
+            groupId={group.id}
+            ownerName={group.name}
+            pax={group.pax_count || 1}
+            onCostsChange={handleCostsChange}
+          />
+        </div>
+      </CollapsiblePanel>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {/* Members */}
@@ -274,6 +286,27 @@ export default function GroupCard() {
       )}
 
       {showQuote && <GroupQuoteModal group={group} onClose={() => setShowQuote(false)} />}
+    </div>
+  )
+}
+
+function CollapsiblePanel({ label, defaultOpen = true, children, badge }: { label: string; defaultOpen?: boolean; children: React.ReactNode; badge?: string }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <button onClick={() => setOpen(o => !o)}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', border: '0.5px solid #eee', borderRadius: open ? '12px 12px 0 0' : 12, padding: '11px 16px', cursor: 'pointer', borderBottom: open ? '0.5px solid #f0f0f0' : undefined }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {label}
+          {badge && <span style={{ fontSize: 10, background: '#EEEDFE', color: '#534AB7', borderRadius: 20, padding: '2px 8px', fontWeight: 700 }}>{badge}</span>}
+        </span>
+        {open ? <ChevronUp size={15} color="#999" /> : <ChevronDown size={15} color="#999" />}
+      </button>
+      {open && (
+        <div style={{ background: '#fff', border: '0.5px solid #eee', borderTop: 'none', borderRadius: '0 0 12px 12px', padding: 0 }}>
+          {children}
+        </div>
+      )}
     </div>
   )
 }
