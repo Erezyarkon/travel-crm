@@ -65,6 +65,51 @@ export default function GroupCard() {
     if (clientId) navigate(`/clients/${clientId}`)
   }
 
+  // ── Bi-directional sync between Pricing ↔ Itinerary costs ──
+
+  // Called when DayCostsPanel changes → update pricing.days
+  async function handleCostsChange(dayNumber: number, totals: { meals: number; entrances: number; guide: number; transport: number }) {
+    if (!group || !group.pricing?.days) return
+    const days = [...(group.pricing.days || [])]
+    const idx = dayNumber - 1
+    if (idx < 0 || idx >= days.length) return
+    days[idx] = {
+      ...days[idx],
+      meals: totals.meals,
+      entrances: totals.entrances,
+      guide_fee: totals.guide || days[idx].guide_fee,
+    }
+    const updatedPricing = { ...group.pricing, days }
+    await updateGroup(group.id, { pricing: updatedPricing as any })
+    setGroup(g => g ? { ...g, pricing: updatedPricing as any } : g)
+  }
+
+  // Called when GroupPricingPanel changes meals/entrances → update itinerary_day_costs
+  async function handleDayFieldChange(dayNumber: number, field: 'meals' | 'entrances', value: number) {
+    if (!id) return
+    // Find the itinerary for this group
+    const { data: itRows } = await import('../lib/supabase').then(m => m.supabase
+      .from('client_itineraries').select('id').eq('group_id', id).limit(1))
+    const itId = itRows?.[0]?.id
+    if (!itId) return
+    // Find the matching day
+    const { data: dayRows } = await import('../lib/supabase').then(m => m.supabase
+      .from('client_itinerary_days').select('id').eq('itinerary_id', itId).eq('day_number', dayNumber).limit(1))
+    const dayId = dayRows?.[0]?.id
+    if (!dayId) return
+    // Find or update the cost row of matching type
+    const costType = field === 'meals' ? 'meal' : 'entrance'
+    const { data: existing } = await import('../lib/supabase').then(m => m.supabase
+      .from('itinerary_day_costs').select('id').eq('day_id', dayId).eq('type', costType).limit(1))
+    if (existing && existing.length > 0) {
+      await import('../lib/supabase').then(m => m.supabase
+        .from('itinerary_day_costs').update({ unit_cost: value, description: field === 'meals' ? 'Meals' : 'Entrances' }).eq('id', existing[0].id))
+    } else if (value > 0) {
+      await import('../lib/supabase').then(m => m.supabase
+        .from('itinerary_day_costs').insert({ day_id: dayId, type: costType, description: field === 'meals' ? 'Meals' : 'Entrances', unit_cost: value, quantity: 1, sort_order: 0 }))
+    }
+  }
+
   if (loading) return <div style={{ padding: 24, color: '#888' }}>Loading…</div>
   if (!group) return <div style={{ padding: 24, color: '#888' }}>Group not found.</div>
 
@@ -163,13 +208,22 @@ export default function GroupCard() {
       )}
 
       {/* Pricing calculator */}
-      <GroupPricingPanel group={group} onSaved={(price, single) => setGroup(g => g ? { ...g, price_per_person: price, single_supplement: single } : g)} />
+      <GroupPricingPanel
+        group={group}
+        onSaved={(price, single) => setGroup(g => g ? { ...g, price_per_person: price, single_supplement: single } : g)}
+        onDayFieldChange={handleDayFieldChange}
+      />
 
       {/* Rooming list */}
       <GroupRoomingPanel group={group} onSaved={(rooms, guideDriver) => setGroup(g => g ? { ...g, rooming: rooms, guide_driver: guideDriver } : g)} />
 
       {/* Itinerary */}
-      <GroupItineraryPanel groupId={group.id} ownerName={group.name} pax={group.pax_count || 1} />
+      <GroupItineraryPanel
+        groupId={group.id}
+        ownerName={group.name}
+        pax={group.pax_count || 1}
+        onCostsChange={handleCostsChange}
+      />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {/* Members */}

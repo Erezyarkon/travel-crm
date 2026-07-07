@@ -23,7 +23,11 @@ const COL = {
   actions: 44,
 }
 
-export default function GroupPricingPanel({ group, onSaved }: { group: any; onSaved?: (price: number, single: number) => void }) {
+export default function GroupPricingPanel({ group, onSaved, onDayFieldChange }: {
+  group: any
+  onSaved?: (price: number, single: number) => void
+  onDayFieldChange?: (dayNumber: number, field: 'meals' | 'entrances', value: number) => void
+}) {
   const toast = useToast()
   const cur = group.currency || 'USD'
   const [m, setM] = useState<PricingModel>(() => normalize(group.pricing))
@@ -33,7 +37,12 @@ export default function GroupPricingPanel({ group, onSaved }: { group: any; onSa
 
   function set<K extends keyof PricingModel>(k: K, v: PricingModel[K]) { setM(p => ({ ...p, [k]: v })) }
   function setVehicle(k: 'mini' | 'midi' | 'bus', v: number) { setM(p => ({ ...p, vehicle: { ...p.vehicle, [k]: v } })) }
-  function setDay(i: number, patch: Partial<PricingDay>) { setM(p => ({ ...p, days: p.days.map((d, j) => j === i ? { ...d, ...patch } : d) })) }
+  function setDay(i: number, patch: Partial<PricingDay>) {
+    setM(p => ({ ...p, days: p.days.map((d, j) => j === i ? { ...d, ...patch } : d) }))
+    // Sync meals/entrances to itinerary costs
+    if (patch.meals !== undefined && onDayFieldChange) onDayFieldChange(i + 1, 'meals', patch.meals)
+    if (patch.entrances !== undefined && onDayFieldChange) onDayFieldChange(i + 1, 'entrances', patch.entrances)
+  }
 
   function addDay() {
     const last = m.days[m.days.length - 1]

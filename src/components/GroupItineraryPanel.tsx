@@ -22,9 +22,10 @@ interface Props {
   clientId?: string
   ownerName: string
   pax?: number
+  onCostsChange?: (dayNumber: number, totals: { meals: number; entrances: number; guide: number; transport: number }) => void
 }
 
-export default function GroupItineraryPanel({ groupId, clientId, ownerName, pax = 1 }: Props) {
+export default function GroupItineraryPanel({ groupId, clientId, ownerName, pax = 1, onCostsChange }: Props) {
   const toast = useToast()
   const [itinerary, setItinerary] = useState<ClientItinerary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -237,7 +238,13 @@ export default function GroupItineraryPanel({ groupId, clientId, ownerName, pax 
                         </div>
                       </div>
                       {/* Per-day cost rows — internal only */}
-                      <DayCostsPanel dayId={day.id} pax={pax} />
+                      <DayCostsPanel
+                        dayId={day.id}
+                        dayNumber={day.day_number}
+                        pax={pax}
+                        groupId={groupId}
+                        onCostsChange={onCostsChange}
+                      />
                     </div>
                   )
                 })}
@@ -268,7 +275,13 @@ export default function GroupItineraryPanel({ groupId, clientId, ownerName, pax 
 // ============================================================
 // Per-day cost rows panel (internal only)
 // ============================================================
-function DayCostsPanel({ dayId, pax }: { dayId: string; pax: number }) {
+function DayCostsPanel({ dayId, dayNumber, pax, groupId, onCostsChange }: {
+  dayId: string
+  dayNumber: number
+  pax: number
+  groupId?: string
+  onCostsChange?: (dayNumber: number, totals: { meals: number; entrances: number; guide: number; transport: number }) => void
+}) {
   const toast = useToast()
   const [costs, setCosts] = useState<DayCost[]>([])
   const [open, setOpen] = useState(false)
@@ -283,20 +296,37 @@ function DayCostsPanel({ dayId, pax }: { dayId: string; pax: number }) {
 
   useEffect(() => { if (open) load() }, [open, dayId])
 
+  async function syncToPricing(updatedCosts: DayCost[]) {
+    if (!onCostsChange) return
+    const totals = {
+      meals:      updatedCosts.filter(c => c.type === 'meal').reduce((s, c) => s + c.unit_cost * c.quantity, 0),
+      entrances:  updatedCosts.filter(c => c.type === 'entrance').reduce((s, c) => s + c.unit_cost * c.quantity, 0),
+      guide:      updatedCosts.filter(c => c.type === 'guide').reduce((s, c) => s + c.unit_cost * c.quantity, 0),
+      transport:  updatedCosts.filter(c => c.type === 'transport').reduce((s, c) => s + c.unit_cost * c.quantity, 0),
+    }
+    onCostsChange(dayNumber, totals)
+  }
+
   async function handleAdd(type: CostType) {
     const { error } = await addDayCost(dayId, type)
     if (error) { toast.error(error); return }
-    await load()
+    const updated = await getDayCosts(dayId)
+    setCosts(updated)
+    await syncToPricing(updated)
   }
 
   async function handleDelete(id: string) {
     await deleteDayCost(id)
-    await load()
+    const updated = await getDayCosts(dayId)
+    setCosts(updated)
+    await syncToPricing(updated)
   }
 
   async function handleUpdate(id: string, patch: Partial<DayCost>) {
     await updateDayCost(id, patch)
-    await load()
+    const updated = await getDayCosts(dayId)
+    setCosts(updated)
+    await syncToPricing(updated)
   }
 
   const subtotal = calcCostSubtotal(costs)
