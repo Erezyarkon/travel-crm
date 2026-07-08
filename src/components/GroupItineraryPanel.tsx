@@ -280,7 +280,7 @@ function DayCostsPanel({ dayId, dayNumber, pax, groupId, onCostsChange }: {
   dayNumber: number
   pax: number
   groupId?: string
-  onCostsChange?: (dayNumber: number, totals: { meals: number; entrances: number; guide: number; transport: number }) => void
+  onCostsChange?: (dayNumber: number, totals: { meals: number; entrances: number; guide: number; transport: number; porterage: number }) => void
 }) {
   const toast = useToast()
   const [costs, setCosts] = useState<DayCost[]>([])
@@ -303,6 +303,7 @@ function DayCostsPanel({ dayId, dayNumber, pax, groupId, onCostsChange }: {
       entrances:  updatedCosts.filter(c => c.type === 'entrance').reduce((s, c) => s + c.unit_cost * c.quantity, 0),
       guide:      updatedCosts.filter(c => c.type === 'guide').reduce((s, c) => s + c.unit_cost * c.quantity, 0),
       transport:  updatedCosts.filter(c => c.type === 'transport').reduce((s, c) => s + c.unit_cost * c.quantity, 0),
+      porterage:  updatedCosts.filter(c => c.type === 'other' && c.description.toLowerCase().includes('porterage')).reduce((s, c) => s + c.unit_cost * c.quantity, 0),
     }
     onCostsChange(dayNumber, totals)
   }

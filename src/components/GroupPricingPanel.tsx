@@ -27,7 +27,7 @@ const COL = {
 export default function GroupPricingPanel({ group, onSaved, onDayFieldChange }: {
   group: any
   onSaved?: (price: number, single: number) => void
-  onDayFieldChange?: (dayNumber: number, field: 'meals' | 'entrances', value: number) => void
+  onDayFieldChange?: (dayNumber: number, field: 'meals' | 'entrances' | 'porterage', value: number) => void
 }) {
   const toast = useToast()
   const cur = group.currency || 'USD'
@@ -43,6 +43,7 @@ export default function GroupPricingPanel({ group, onSaved, onDayFieldChange }: 
     // Sync meals/entrances to itinerary costs
     if (patch.meals !== undefined && onDayFieldChange) onDayFieldChange(i + 1, 'meals', patch.meals)
     if (patch.entrances !== undefined && onDayFieldChange) onDayFieldChange(i + 1, 'entrances', patch.entrances)
+    if (patch.porterage !== undefined && onDayFieldChange) onDayFieldChange(i + 1, 'porterage', patch.porterage)
   }
 
   function addDay() {

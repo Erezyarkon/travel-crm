@@ -68,15 +68,16 @@ export default function GroupCard() {
   // ── Bi-directional sync between Pricing ↔ Itinerary costs ──
 
   // Called when DayCostsPanel changes → update pricing.days
-  async function handleCostsChange(dayNumber: number, totals: { meals: number; entrances: number; guide: number; transport: number }) {
+  async function handleCostsChange(dayNumber: number, totals: { meals: number; entrances: number; guide: number; transport: number; porterage: number }) {
     if (!group || !group.pricing?.days) return
     const days = [...(group.pricing.days || [])]
     const idx = dayNumber - 1
     if (idx < 0 || idx >= days.length) return
     days[idx] = {
       ...days[idx],
-      meals: totals.meals,
+      meals:     totals.meals,
       entrances: totals.entrances,
+      porterage: totals.porterage,
       guide_fee: totals.guide || days[idx].guide_fee,
     }
     const updatedPricing = { ...group.pricing, days }
@@ -85,28 +86,26 @@ export default function GroupCard() {
   }
 
   // Called when GroupPricingPanel changes meals/entrances → update itinerary_day_costs
-  async function handleDayFieldChange(dayNumber: number, field: 'meals' | 'entrances', value: number) {
+  async function handleDayFieldChange(dayNumber: number, field: 'meals' | 'entrances' | 'porterage', value: number) {
     if (!id) return
-    // Find the itinerary for this group
     const { data: itRows } = await import('../lib/supabase').then(m => m.supabase
       .from('client_itineraries').select('id').eq('group_id', id).limit(1))
     const itId = itRows?.[0]?.id
     if (!itId) return
-    // Find the matching day
     const { data: dayRows } = await import('../lib/supabase').then(m => m.supabase
       .from('client_itinerary_days').select('id').eq('itinerary_id', itId).eq('day_number', dayNumber).limit(1))
     const dayId = dayRows?.[0]?.id
     if (!dayId) return
-    // Find or update the cost row of matching type
-    const costType = field === 'meals' ? 'meal' : 'entrance'
+    const costType = field === 'meals' ? 'meal' : field === 'entrances' ? 'entrance' : 'other'
+    const description = field === 'meals' ? 'Meals' : field === 'entrances' ? 'Entrances' : 'Porterage'
     const { data: existing } = await import('../lib/supabase').then(m => m.supabase
-      .from('itinerary_day_costs').select('id').eq('day_id', dayId).eq('type', costType).limit(1))
+      .from('itinerary_day_costs').select('id').eq('day_id', dayId).eq('type', costType).eq('description', description).limit(1))
     if (existing && existing.length > 0) {
       await import('../lib/supabase').then(m => m.supabase
-        .from('itinerary_day_costs').update({ unit_cost: value, description: field === 'meals' ? 'Meals' : 'Entrances' }).eq('id', existing[0].id))
+        .from('itinerary_day_costs').update({ unit_cost: value, description }).eq('id', existing[0].id))
     } else if (value > 0) {
       await import('../lib/supabase').then(m => m.supabase
-        .from('itinerary_day_costs').insert({ day_id: dayId, type: costType, description: field === 'meals' ? 'Meals' : 'Entrances', unit_cost: value, quantity: 1, sort_order: 0 }))
+        .from('itinerary_day_costs').insert({ day_id: dayId, type: costType, description, unit_cost: value, quantity: 1, sort_order: 0 }))
     }
   }
 
