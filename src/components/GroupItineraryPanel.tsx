@@ -303,7 +303,7 @@ function DayCostsPanel({ dayId, dayNumber, pax, groupId, onCostsChange }: {
       entrances:  updatedCosts.filter(c => c.type === 'entrance').reduce((s, c) => s + c.unit_cost * c.quantity, 0),
       guide:      updatedCosts.filter(c => c.type === 'guide').reduce((s, c) => s + c.unit_cost * c.quantity, 0),
       transport:  updatedCosts.filter(c => c.type === 'transport').reduce((s, c) => s + c.unit_cost * c.quantity, 0),
-      porterage:  updatedCosts.filter(c => c.type === 'other' && c.description.toLowerCase().includes('porterage')).reduce((s, c) => s + c.unit_cost * c.quantity, 0),
+      porterage:  updatedCosts.filter(c => c.type === 'porterage' || (c.type === 'other' && c.description.toLowerCase().includes('porterage'))).reduce((s, c) => s + c.unit_cost * c.quantity, 0),
     }
     onCostsChange(dayNumber, totals)
   }

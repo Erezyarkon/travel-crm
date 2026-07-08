@@ -96,10 +96,10 @@ export default function GroupCard() {
       .from('client_itinerary_days').select('id').eq('itinerary_id', itId).eq('day_number', dayNumber).limit(1))
     const dayId = dayRows?.[0]?.id
     if (!dayId) return
-    const costType = field === 'meals' ? 'meal' : field === 'entrances' ? 'entrance' : 'other'
+    const costType = field === 'meals' ? 'meal' : field === 'entrances' ? 'entrance' : 'porterage'
     const description = field === 'meals' ? 'Meals' : field === 'entrances' ? 'Entrances' : 'Porterage'
     const { data: existing } = await import('../lib/supabase').then(m => m.supabase
-      .from('itinerary_day_costs').select('id').eq('day_id', dayId).eq('type', costType).eq('description', description).limit(1))
+      .from('itinerary_day_costs').select('id').eq('day_id', dayId).eq('type', costType).limit(1))
     if (existing && existing.length > 0) {
       await import('../lib/supabase').then(m => m.supabase
         .from('itinerary_day_costs').update({ unit_cost: value, description }).eq('id', existing[0].id))

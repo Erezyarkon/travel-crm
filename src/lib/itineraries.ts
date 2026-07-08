@@ -270,7 +270,7 @@ export function dayDate(startDate: string | null, dayNumber: number): string | n
 // ============================================================
 // Per-day cost rows (internal only — never shown to client)
 // ============================================================
-export type CostType = 'hotel' | 'transport' | 'entrance' | 'meal' | 'guide' | 'other'
+export type CostType = 'hotel' | 'transport' | 'entrance' | 'meal' | 'guide' | 'porterage' | 'other'
 
 export interface DayCost {
   id: string
@@ -284,12 +284,13 @@ export interface DayCost {
 }
 
 export const COST_TYPE_META: Record<CostType, { label: string; emoji: string; color: string; bg: string }> = {
-  hotel:     { label: 'Hotel',     emoji: '🏨', color: '#185FA5', bg: '#E6F1FB' },
-  transport: { label: 'Transport', emoji: '🚌', color: '#854F0B', bg: '#FAEEDA' },
-  entrance:  { label: 'Entrance',  emoji: '🎟', color: '#534AB7', bg: '#EEEDFE' },
-  meal:      { label: 'Meal',      emoji: '🍽',  color: '#0F6E56', bg: '#E1F5EE' },
-  guide:     { label: 'Guide',     emoji: '🧭', color: '#3B6D11', bg: '#EAF3DE' },
-  other:     { label: 'Other',     emoji: '📋', color: '#888',    bg: '#f5f5f5' },
+  hotel:     { label: 'Hotel',      emoji: '🏨', color: '#185FA5', bg: '#E6F1FB' },
+  transport: { label: 'Transport',  emoji: '🚌', color: '#854F0B', bg: '#FAEEDA' },
+  entrance:  { label: 'Entrance',   emoji: '🎟', color: '#534AB7', bg: '#EEEDFE' },
+  meal:      { label: 'Meal',       emoji: '🍽',  color: '#0F6E56', bg: '#E1F5EE' },
+  guide:     { label: 'Guide',      emoji: '🧭', color: '#3B6D11', bg: '#EAF3DE' },
+  porterage: { label: 'Porterage',  emoji: '🧳', color: '#A32D2D', bg: '#FBEAEA' },
+  other:     { label: 'Other',      emoji: '📋', color: '#888',    bg: '#f5f5f5' },
 }
 
 export async function getDayCosts(dayId: string): Promise<DayCost[]> {
