@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import { Profile, Role } from './auth'
 
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || ''
+const supabaseUrl = 'https://bjlrcainoeoeqxqljrpn.supabase.co'
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqbHJjYWlub2VvZXhxbGpycHJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzODg4MDQsImV4cCI6MjA5Njk2NDgwNH0.Mc0AbYLNXcbxfIo7rhtdxD3nJL76QM5TzEA6bYTTpUU'
 
 // A separate, isolated client used ONLY for creating new users.
 // Using a second client (with no session persistence) means signing
@@ -63,3 +63,4 @@ export async function sendPasswordReset(email: string): Promise<{ error: string 
   })
   return { error: error ? error.message : null }
 }
+
